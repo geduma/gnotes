@@ -111,10 +111,14 @@ ${merged.body}`
     }
   }
 
-  const filteredNotes = notes.filter(note =>
-    note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    note.body.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredNotes = notes.filter(note => {
+    const query = searchQuery.toLowerCase()
+    return (
+      note.title.toLowerCase().includes(query) ||
+      note.body.toLowerCase().includes(query) ||
+      (note.tags && note.tags.some(tag => tag.toLowerCase().includes(query)))
+    )
+  })
 
   return (
     <div className="app">
