@@ -59,18 +59,14 @@ function Editor({ note, onUpdate, showPreview }) {
       e.preventDefault()
       const value = tagInput.trim().replace(/,/g, '').toLowerCase()
       if (value && !tags.includes(value)) {
-        const newTags = [...tags, value]
-        setTags(newTags)
-        savedTagsRef.current = newTags
+        setTags([...tags, value])
       }
       setTagInput('')
     }
   }
 
   const removeTag = (tagToRemove) => {
-    const newTags = tags.filter(t => t !== tagToRemove)
-    setTags(newTags)
-    savedTagsRef.current = newTags
+    setTags(tags.filter(t => t !== tagToRemove))
   }
 
   const handleTitleChange = (e) => {
