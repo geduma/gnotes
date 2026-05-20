@@ -1,0 +1,136 @@
+import { useState, useEffect, useCallback } from 'react'
+import Sidebar from './components/Sidebar'
+import Editor from './components/Editor'
+import { generateUniqueSlug } from './utils/slug'
+
+function App() {
+  const [notes, setNotes] = useState([])
+  const [activeNote, setActiveNote] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showPreview, setShowPreview] = useState(false)
+
+  const loadNotes = useCallback(async () => {
+    try {
+      const response = await fetch('/api/notes')
+      const data = await response.json()
+      setNotes(data)
+    } catch (error) {
+      console.error('Error loading notes:', error)
+      setNotes([])
+    }
+  }, [])
+
+  useEffect(() => {
+    loadNotes()
+  }, [loadNotes])
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '.') {
+        e.preventDefault()
+        setShowPreview(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const createNote = async () => {
+    const title = 'Untitled Note'
+    const slug = generateUniqueSlug(title, notes.map(n => n.slug))
+    const now = new Date().toISOString().split('T')[0]
+    const content = `---
+title: ${title}
+tags: []
+updated: ${now}
+---
+
+`
+
+    try {
+      await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, content })
+      })
+      await loadNotes()
+      const newNote = { slug, title, updated: now, tags: [], body: '' }
+      setActiveNote(newNote)
+    } catch (error) {
+      console.error('Error creating note:', error)
+    }
+  }
+
+  const updateNote = async (slug, updatedFields) => {
+    const note = notes.find(n => n.slug === slug)
+    if (!note) return
+
+    const merged = { ...note, ...updatedFields, updated: new Date().toISOString().split('T')[0] }
+    const content = `---
+title: ${merged.title}
+tags:
+${merged.tags.map(t => `  - ${t}`).join('\n')}
+updated: ${merged.updated}
+---
+
+${merged.body}`
+
+    const newSlug = generateUniqueSlug(merged.title, notes.map(n => n.slug).filter(s => s !== slug))
+    const finalSlug = newSlug !== slug ? newSlug : slug
+
+    try {
+      await fetch(`/api/notes/${slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, newSlug: finalSlug !== slug ? finalSlug : null })
+      })
+      await loadNotes()
+      setActiveNote({ ...merged, slug: finalSlug })
+    } catch (error) {
+      console.error('Error updating note:', error)
+    }
+  }
+
+  const deleteNote = async (slug) => {
+    try {
+      await fetch(`/api/notes/${slug}`, { method: 'DELETE' })
+      await loadNotes()
+      if (activeNote && activeNote.slug === slug) {
+        setActiveNote(null)
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error)
+    }
+  }
+
+  const filteredNotes = notes.filter(note =>
+    note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    note.body.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  return (
+    <div className="app">
+      <Sidebar
+        notes={filteredNotes}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onCreateNote={createNote}
+        onSelectNote={setActiveNote}
+        activeNoteSlug={activeNote?.slug}
+      />
+      {activeNote ? (
+        <Editor
+          note={activeNote}
+          onUpdate={updateNote}
+          showPreview={showPreview}
+        />
+      ) : (
+        <div className="editor-empty">
+          <p>Select or create a note</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default App
