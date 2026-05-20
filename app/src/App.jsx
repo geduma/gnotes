@@ -128,6 +128,7 @@ ${merged.body}`
       />
       {activeNote ? (
         <Editor
+          key={activeNote.slug}
           note={activeNote}
           onUpdate={updateNote}
           showPreview={showPreview}
