@@ -22,6 +22,16 @@ function Sidebar({ notes, searchQuery, onSearchChange, onCreateNote, onSelectNot
           >
             <div className="sidebar-item-title">{note.title}</div>
             <div className="sidebar-item-date">{note.updated}</div>
+            {note.tags && note.tags.length > 0 && (
+              <div className="sidebar-item-tags">
+                {note.tags.slice(0, 3).map(tag => (
+                  <span key={tag} className="sidebar-tag">{tag}</span>
+                ))}
+                {note.tags.length > 3 && (
+                  <span className="sidebar-tag-more">+{note.tags.length - 3}</span>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

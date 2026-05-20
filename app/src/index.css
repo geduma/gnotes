@@ -113,6 +113,27 @@ body {
   color: var(--text-secondary);
 }
 
+.sidebar-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.sidebar-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  background: var(--bg);
+  border-radius: 8px;
+  color: var(--text-secondary);
+}
+
+.sidebar-tag-more {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
 /* Editor */
 .editor {
   flex: 1;
@@ -123,11 +144,73 @@ body {
 }
 
 .editor-header {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.editor-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  min-height: 28px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.tag-remove:hover {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.tag-input {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  min-width: 80px;
+}
+
+.tag-input:focus {
+  border-color: var(--border);
+}
+
+.tag-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
 }
 
 .editor-title {
