@@ -98,6 +98,7 @@ export function notesPlugin() {
               if (fs.existsSync(filePath)) {
                 fs.renameSync(filePath, newFilePath)
               }
+              fs.writeFileSync(newFilePath, content, 'utf-8')
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify({ success: true, slug: newSlug }))
             } else {
