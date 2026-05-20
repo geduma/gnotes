@@ -124,16 +124,58 @@ body {
 
 .editor-header {
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .editor-title {
+  flex: 1;
   font-size: 24px;
   font-weight: 600;
   background: transparent;
   border: none;
   color: var(--text-primary);
   outline: none;
-  width: 100%;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.save-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.save-status.saved {
+  color: var(--text-secondary);
+}
+
+.save-status.unsaved {
+  color: #8B8B8B;
+}
+
+.save-button {
+  padding: 6px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.save-button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.save-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .editor-body {
