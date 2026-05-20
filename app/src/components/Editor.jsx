@@ -8,10 +8,7 @@ function Editor({ note, onUpdate, showPreview }) {
   const [tagInput, setTagInput] = useState('')
   const [saved, setSaved] = useState(true)
   const prevSlugRef = useRef(note.slug)
-  const hasUnsavedChanges = useRef(false)
-  const savedTitleRef = useRef(note.title)
-  const savedBodyRef = useRef(note.body)
-  const savedTagsRef = useRef(note.tags || [])
+  const lastSavedRef = useRef({ title: note.title, body: note.body, tags: note.tags || [] })
 
   useEffect(() => {
     if (prevSlugRef.current !== note.slug) {
@@ -19,26 +16,19 @@ function Editor({ note, onUpdate, showPreview }) {
       setBody(note.body)
       setTags(note.tags || [])
       setSaved(true)
+      lastSavedRef.current = { title: note.title, body: note.body, tags: note.tags || [] }
       prevSlugRef.current = note.slug
-      hasUnsavedChanges.current = false
-      savedTitleRef.current = note.title
-      savedBodyRef.current = note.body
-      savedTagsRef.current = note.tags || []
     }
   }, [note])
 
   useEffect(() => {
-    if (title !== savedTitleRef.current || body !== savedBodyRef.current || JSON.stringify(tags) !== JSON.stringify(savedTagsRef.current)) {
-      hasUnsavedChanges.current = true
-      setSaved(false)
-    }
+    const lastSaved = lastSavedRef.current
+    const hasChanges = title !== lastSaved.title || body !== lastSaved.body || JSON.stringify(tags) !== JSON.stringify(lastSaved.tags)
+    setSaved(!hasChanges)
     const timer = setTimeout(() => {
-      if (hasUnsavedChanges.current) {
+      if (hasChanges) {
         onUpdate(note.slug, { title, body, tags })
-        savedTitleRef.current = title
-        savedBodyRef.current = body
-        savedTagsRef.current = tags
-        hasUnsavedChanges.current = false
+        lastSavedRef.current = { title, body, tags }
         setSaved(true)
       }
     }, 2000)
@@ -47,10 +37,7 @@ function Editor({ note, onUpdate, showPreview }) {
 
   const saveNow = useCallback(() => {
     onUpdate(note.slug, { title, body, tags })
-    savedTitleRef.current = title
-    savedBodyRef.current = body
-    savedTagsRef.current = tags
-    hasUnsavedChanges.current = false
+    lastSavedRef.current = { title, body, tags }
     setSaved(true)
   }, [note.slug, title, body, tags, onUpdate])
 
