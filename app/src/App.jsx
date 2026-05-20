@@ -37,9 +37,15 @@ function App() {
 
   const createNote = async () => {
     const title = 'Untitled Note'
-    const slug = generateUniqueSlug(title, notes.map(n => n.slug))
     const now = new Date().toISOString().split('T')[0]
-    const content = `---
+
+    try {
+      const response = await fetch('/api/notes')
+      const currentNotes = await response.json()
+      const existingSlugs = currentNotes.map(n => n.slug)
+      const slug = generateUniqueSlug(title, existingSlugs)
+
+      const content = `---
 title: ${title}
 tags: []
 updated: ${now}
@@ -47,7 +53,6 @@ updated: ${now}
 
 `
 
-    try {
       await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,10 +80,13 @@ updated: ${merged.updated}
 
 ${merged.body}`
 
-    const newSlug = generateUniqueSlug(merged.title, notes.map(n => n.slug).filter(s => s !== slug))
-    const finalSlug = newSlug !== slug ? newSlug : slug
-
     try {
+      const response = await fetch('/api/notes')
+      const currentNotes = await response.json()
+      const existingSlugs = currentNotes.map(n => n.slug).filter(s => s !== slug)
+      const newSlug = generateUniqueSlug(merged.title, existingSlugs)
+      const finalSlug = newSlug !== slug ? newSlug : slug
+
       await fetch(`/api/notes/${slug}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
