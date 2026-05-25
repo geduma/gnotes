@@ -229,20 +229,8 @@ body {
   gap: 12px;
 }
 
-.save-status {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.save-status.saved {
-  color: var(--text-secondary);
-}
-
-.save-status.unsaved {
-  color: #8B8B8B;
-}
-
 .save-button {
+  height: 32px;
   padding: 6px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -250,6 +238,27 @@ body {
   color: var(--text-primary);
   font-size: 13px;
   cursor: pointer;
+}
+
+.close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.close-button:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
 }
 
 .save-button:hover:not(:disabled) {
@@ -352,11 +361,80 @@ body {
   background: var(--accent);
 }
 
+/* Mobile sidebar toggle */
+.menu-toggle,
+.sidebar-backdrop {
+  display: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar {
-    width: 240px;
-    min-width: 240px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    max-width: 85vw;
+    height: 100vh;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 199;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+
+  .sidebar-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .menu-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 50;
+    width: 48px;
+    height: 48px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .menu-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: var(--text-primary);
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  .menu-toggle:hover {
+    border-color: var(--accent);
+  }
+
+  .menu-toggle:hover span {
+    background: var(--accent);
   }
 
   .editor {
@@ -372,5 +450,9 @@ body {
     border-top: 1px solid var(--border);
     padding-left: 0;
     padding-top: 16px;
+  }
+
+  .editor-title {
+    font-size: 20px;
   }
 }

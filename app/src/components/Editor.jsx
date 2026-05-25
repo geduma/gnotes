@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 
-function Editor({ note, onUpdate, showPreview }) {
+function Editor({ note, onUpdate, showPreview, onCloseNote }) {
   const [title, setTitle] = useState(note.title)
   const [body, setBody] = useState(note.body)
   const [tags, setTags] = useState(note.tags || [])
@@ -75,9 +75,6 @@ function Editor({ note, onUpdate, showPreview }) {
           placeholder="Note title..."
         />
         <div className="editor-actions">
-          <span className={`save-status ${saved ? 'saved' : 'unsaved'}`}>
-            {saved ? 'Saved' : 'Unsaved'}
-          </span>
           <button
             className="save-button"
             onClick={saveNow}
@@ -85,6 +82,7 @@ function Editor({ note, onUpdate, showPreview }) {
           >
             Save
           </button>
+          <button className="close-button" onClick={onCloseNote} title="Close note">✕</button>
         </div>
       </div>
       <div className="editor-tags">

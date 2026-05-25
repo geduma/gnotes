@@ -1,18 +1,20 @@
-function Sidebar({ notes, searchQuery, onSearchChange, onCreateNote, onSelectNote, activeNoteSlug }) {
+function Sidebar({ notes, searchQuery, onSearchChange, onCreateNote, onSelectNote, activeNoteSlug, isOpen, onClose }) {
   return (
-    <div className="sidebar">
-      <div className="sidebar-header">
-        <input
-          type="text"
-          className="sidebar-search"
-          placeholder="Search notes..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-        <button className="sidebar-new" onClick={onCreateNote}>
-          New Note
-        </button>
-      </div>
+    <>
+      <div className={`sidebar-backdrop ${isOpen ? 'visible' : ''}`} onClick={onClose} />
+      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <input
+            type="text"
+            className="sidebar-search"
+            placeholder="Search notes..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          <button className="sidebar-new" onClick={onCreateNote}>
+            New Note
+          </button>
+        </div>
       <div className="sidebar-list">
         {notes.map((note) => (
           <div
@@ -36,6 +38,7 @@ function Sidebar({ notes, searchQuery, onSearchChange, onCreateNote, onSelectNot
         ))}
       </div>
     </div>
+    </>
   )
 }
 

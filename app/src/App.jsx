@@ -8,6 +8,7 @@ function App() {
   const [activeNote, setActiveNote] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showPreview, setShowPreview] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const loadNotes = useCallback(async () => {
     try {
@@ -111,6 +112,11 @@ ${merged.body}`
     }
   }
 
+  const handleSelectNote = (note) => {
+    setActiveNote(note)
+    setMobileSidebarOpen(false)
+  }
+
   const filteredNotes = notes.filter(note => {
     const query = searchQuery.toLowerCase()
     return (
@@ -127,15 +133,21 @@ ${merged.body}`
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onCreateNote={createNote}
-        onSelectNote={setActiveNote}
+        onSelectNote={handleSelectNote}
         activeNoteSlug={activeNote?.slug}
+        isOpen={mobileSidebarOpen}
+        onClose={() => setMobileSidebarOpen(false)}
       />
+      <button className="menu-toggle" onClick={() => setMobileSidebarOpen(prev => !prev)}>
+        <span></span><span></span><span></span>
+      </button>
       {activeNote ? (
         <Editor
           key={activeNote.slug}
           note={activeNote}
           onUpdate={updateNote}
           showPreview={showPreview}
+          onCloseNote={() => { setActiveNote(null); setMobileSidebarOpen(true) }}
         />
       ) : (
         <div className="editor-empty">
