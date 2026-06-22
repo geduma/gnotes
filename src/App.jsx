@@ -17,6 +17,7 @@ function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(0)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [error, setError] = useState(null)
   const loadingRef = useRef(0)
   const pendingSlugsRef = useRef(new Set())
   const notesRef = useRef(notes)
@@ -45,17 +46,22 @@ function App() {
   }, [startLoading, stopLoading])
 
   const loadNotes = useCallback(async () => {
+    setError(null)
     await wrap(async () => {
       try {
         if (isPrivate) {
+          if (!user?.ownerHash) {
+            throw new Error('User data is incomplete — missing owner identifier')
+          }
           const data = await fetchNotes(user.ownerHash)
           setNotes(data)
         } else {
           const data = await localDB.getAllNotes()
           setNotes(data)
         }
-      } catch (error) {
-        console.error('Error loading notes:', error)
+      } catch (err) {
+        console.error('Error loading notes:', err)
+        setError(err.message || 'Failed to load notes')
         setNotes([])
       }
     })
@@ -244,7 +250,14 @@ function App() {
           />
         ) : (
           <div className="editor-empty">
-            <p>Select or create a note</p>
+            {error ? (
+              <div className="error-banner">
+                <p>{error}</p>
+                <button className="error-retry" onClick={loadNotes}>Retry</button>
+              </div>
+            ) : (
+              <p>Select or create a note</p>
+            )}
           </div>
         )}
         <div className="app-footer">by @geduma ☕</div>
