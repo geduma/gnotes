@@ -90,7 +90,11 @@ body {
   padding: 10px 12px;
   border-radius: 4px;
   cursor: pointer;
-  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-item:last-child {
+  border-bottom: none;
 }
 
 .sidebar-item:hover {

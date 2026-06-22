@@ -6,51 +6,43 @@ Aplicación personal de notas minimalista, rápida y autoalojable.
 
 - Markdown puro con vista previa renderizada
 - Autoguardado con debounce de 2s
-- Frontmatter obligatorio en cada nota
-- Nomenclatura de archivos basada en slug del título
-- Búsqueda de notas
+- Búsqueda de notas por título, cuerpo y tags
 - Dark mode por defecto
-- Sin backend — archivos `.md` directos en filesystem
+- API externa con persistencia en MongoDB
 - CSS puro, sin frameworks de UI
 
 ## Stack
 
 - React + Vite
 - CSS puro
-- gray-matter (frontmatter)
 - react-markdown (preview)
 - Vitest (tests)
+- API REST externa (`https://api.geduma.com`)
 
 ## Estructura
 
 ```
-project/
-├── app/                    # Aplicación frontend
-│   ├── src/
-│   │   ├── components/     # Sidebar, Editor
-│   │   ├── utils/          # Slugs, parsing de notas
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── vite.config.js
-│   ├── vite-notes-plugin.js
-│   └── package.json
-├── notes/                  # Notas en formato .md
-│   ├── personal/
-│   ├── proyectos/
-│   └── inbox/
-└── README.md
+gnotes/
+├── src/
+│   ├── components/     # Sidebar, Editor
+│   ├── utils/          # Slugs, API client
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── vite.config.js
+├── package.json
+├── index.html
+└── public/
 ```
 
 ## Desarrollo
 
 ```bash
-cd app
 npm install
 npm run dev
 ```
 
-La app se abre en `http://localhost:3000/`.
+La app se abre en `http://localhost:5173/`.
 
 ## Tests
 
@@ -65,41 +57,12 @@ npm run test:run    # una vez
 |-------|--------|
 | `CMD/CTRL + .` | Toggle preview markdown |
 
-## Formato de notas
+## API
 
-Cada nota es un archivo `.md` con frontmatter obligatorio:
-
-```md
----
-title: Mi nota
-tags:
-  - tag1
-  - tag2
-updated: 2026-05-20
----
-
-Contenido en markdown aquí...
-```
-
-El nombre del archivo se genera automáticamente desde el título (`mi-nota.md`).
-
-## Docker (opcional)
-
-Para self-hosted en homelab:
-
-```yaml
-services:
-  gnotes:
-    build: ./app
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./notes:/app/notes
-```
+La app consume una API REST externa. Documentación completa en `docs/02-migracion-api-externa.md`.
 
 ## Filosofía
 
-- Sin backend, sin base de datos, sin API
-- Tus notas son archivos que puedes abrir con cualquier editor
-- IA-friendly: acceso directo al filesystem
 - Minimalista: sin dashboards, sin widgets, sin iconografía recargada
+- Rápida: respuesta instantánea en escritura y navegación
+- Sin vendor lock-in: datos portables en MongoDB

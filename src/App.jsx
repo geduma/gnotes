@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Sidebar from './components/Sidebar'
 import Editor from './components/Editor'
 import { generateUniqueSlug } from './utils/slug'
+import { fetchNotes, createNote, updateNote, deleteNote } from './utils/api'
 
 function App() {
   const [notes, setNotes] = useState([])
@@ -12,8 +13,7 @@ function App() {
 
   const loadNotes = useCallback(async () => {
     try {
-      const response = await fetch('/api/notes')
-      const data = await response.json()
+      const data = await fetchNotes()
       setNotes(data)
     } catch (error) {
       console.error('Error loading notes:', error)
@@ -36,29 +36,14 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const createNote = async () => {
+  const createNewNote = async () => {
     const title = 'Untitled Note'
     const now = new Date().toISOString().split('T')[0]
+    const existingSlugs = notes.map(n => n.slug)
+    const slug = generateUniqueSlug(title, existingSlugs)
 
     try {
-      const response = await fetch('/api/notes')
-      const currentNotes = await response.json()
-      const existingSlugs = currentNotes.map(n => n.slug)
-      const slug = generateUniqueSlug(title, existingSlugs)
-
-      const content = `---
-title: ${title}
-tags: []
-updated: ${now}
----
-
-`
-
-      await fetch('/api/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, content })
-      })
+      await createNote({ slug, title, body: '', tags: [], updated: now })
       await loadNotes()
       const newNote = { slug, title, updated: now, tags: [], body: '' }
       setActiveNote(newNote)
@@ -67,42 +52,31 @@ updated: ${now}
     }
   }
 
-  const updateNote = async (slug, updatedFields) => {
+  const updateExistingNote = async (slug, updatedFields) => {
     const note = notes.find(n => n.slug === slug)
     if (!note) return
 
     const merged = { ...note, ...updatedFields, updated: new Date().toISOString().split('T')[0] }
-    const content = `---
-title: ${merged.title}
-tags:
-${merged.tags.map(t => `  - ${t}`).join('\n')}
-updated: ${merged.updated}
----
+    const existingSlugs = notes.map(n => n.slug).filter(s => s !== slug)
+    const newSlug = generateUniqueSlug(merged.title, existingSlugs)
+    const finalSlug = newSlug !== slug ? newSlug : null
 
-${merged.body}`
+    const body = { title: merged.title, body: merged.body, tags: merged.tags, updated: merged.updated }
+    if (finalSlug) body.newSlug = finalSlug
 
     try {
-      const response = await fetch('/api/notes')
-      const currentNotes = await response.json()
-      const existingSlugs = currentNotes.map(n => n.slug).filter(s => s !== slug)
-      const newSlug = generateUniqueSlug(merged.title, existingSlugs)
-      const finalSlug = newSlug !== slug ? newSlug : slug
-
-      await fetch(`/api/notes/${slug}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, newSlug: finalSlug !== slug ? finalSlug : null })
-      })
+      const result = await updateNote(slug, body)
+      const resolvedSlug = result.slug
       await loadNotes()
-      setActiveNote({ ...merged, slug: finalSlug })
+      setActiveNote({ ...merged, slug: resolvedSlug })
     } catch (error) {
       console.error('Error updating note:', error)
     }
   }
 
-  const deleteNote = async (slug) => {
+  const deleteExistingNote = async (slug) => {
     try {
-      await fetch(`/api/notes/${slug}`, { method: 'DELETE' })
+      await deleteNote(slug)
       await loadNotes()
       if (activeNote && activeNote.slug === slug) {
         setActiveNote(null)
@@ -132,7 +106,7 @@ ${merged.body}`
         notes={filteredNotes}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onCreateNote={createNote}
+        onCreateNote={createNewNote}
         onSelectNote={handleSelectNote}
         activeNoteSlug={activeNote?.slug}
         isOpen={mobileSidebarOpen}
@@ -145,7 +119,7 @@ ${merged.body}`
         <Editor
           key={activeNote.slug}
           note={activeNote}
-          onUpdate={updateNote}
+          onUpdate={updateExistingNote}
           showPreview={showPreview}
           onCloseNote={() => { setActiveNote(null); setMobileSidebarOpen(true) }}
         />

@@ -5,8 +5,8 @@
 - React 18 + Vite 5 + Vitest
 - CSS puro (sin Tailwind, sin CSS-in-JS)
 - Markdown: react-markdown 9
-- Frontmatter: gray-matter 4
-- API: Node HTTP nativo (sin Express)
+- API externa: `https://api.geduma.com`
+- Auth: JWT single-use vía `POST /auth`
 - Idioma: Español (UI, commits, docs)
 
 ## Convenciones de Código
@@ -22,18 +22,18 @@
 ## Estructura
 
 ```
-app/
+gnotes/
 ├── src/
 │   ├── components/   # Sidebar.jsx, Editor.jsx
-│   ├── utils/        # slug.js, note.js (+ .test.js)
+│   ├── utils/        # slug.js, api.js (+ .test.js)
 │   ├── hooks/        # (vacio — reservado)
 │   ├── App.jsx       # Estado global, orquestación
 │   ├── main.jsx      # Entry point
 │   └── index.css     # Todos los estilos
-├── server.js         # API server (Node http nativo)
-├── vite-notes-plugin.js  # API en dev (Vite middleware)
 ├── vite.config.js
-└── package.json
+├── package.json
+├── index.html
+└── public/
 ```
 
 ## Patrones
@@ -41,19 +41,22 @@ app/
 - **Sidebar + Editor**: componentes puramente presentacionales, reciben props. `App.jsx` maneja todo el estado y la lógica de negocio.
 - **Autosave**: `Editor.jsx` maneja debounce de 2s con `useEffect` + `setTimeout`. Compara con `prevSlugRef` y `lastSavedRef` para detectar cambios reales.
 - **Key en Editor**: `<Editor key={activeNote.slug}>` fuerza remount al cambiar de nota.
-- **API calls**: fetch nativo, sin axios ni react-query.
-- **Slugs**: `generateUniqueSlug(title, existingSlugs)` desde `utils/slug.js`. Se usa tanto en frontend como en server.
+- **API calls**: fetch nativo desde `utils/api.js`, JWT single-use (refresh antes de cada request).
+- **Slugs**: `generateUniqueSlug(title, existingSlugs)` desde `utils/slug.js`.
+- **Búsqueda**: client-side (filtra por title + body + tags).
 
 ## API
 
-| Método | Ruta | Body |
-|--------|------|------|
-| GET | `/api/notes` | — |
-| POST | `/api/notes` | `{ slug, content }` |
-| PUT | `/api/notes/:slug` | `{ content, newSlug? }` |
-| DELETE | `/api/notes/:slug` | — |
+| Método | Ruta | Auth | Body |
+|--------|------|------|------|
+| POST | `/auth` | ❌ | `{ name, user, key }` |
+| GET | `/gnotes` | Bearer | — |
+| GET | `/gnotes?q=` | Bearer | — |
+| POST | `/gnotes` | Bearer | `{ slug, title, body, tags, updated }` |
+| PUT | `/gnotes/:slug` | Bearer | `{ title?, body?, tags?, updated?, newSlug? }` |
+| DELETE | `/gnotes/:slug` | Bearer | — |
 
-En dev las rutas las sirve `vite-notes-plugin.js` (lee de `notes/` en raíz del proyecto). En prod las sirve `server.js` (lee de `app/notes/`).
+Base URL: `https://api.geduma.com` (producción) o `http://localhost:3000` (desarrollo).
 
 ## Tests
 
@@ -71,10 +74,6 @@ npm run test:run     # una vez
 1. NO agregues comentarios al código.
 2. NO agregues TypeScript ni cambies extensiones a `.tsx`.
 3. NO añadas dependencias nuevas sin verificar que valen la pena.
-4. NO toques `vite-notes-plugin.js` a menos que el cambio lo requiera explícitamente.
-5. NO borres archivos `.md` de notas del proyecto — están en `.gitignore` y son contenido del usuario.
-6. Prefiere CSS puro + custom properties sobre librerías de UI.
-7. Prefiere fetch nativo sobre librerías HTTP.
-8. Prefiere el filesystem como almacenamiento sobre bases de datos.
-9. Si modificas `server.js`, verifica que los cambios tengan equivalente en `vite-notes-plugin.js` para que dev y prod se mantengan sincronizados.
-10. Los mensajes de commit deben ir en español, cortos y descriptivos.
+4. Los mensajes de commit deben ir en español, cortos y descriptivos.
+5. Prefiere CSS puro + custom properties sobre librerías de UI.
+6. Prefiere fetch nativo sobre librerías HTTP.
