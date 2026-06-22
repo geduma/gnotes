@@ -2,18 +2,28 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Sidebar from './components/Sidebar'
 import Editor from './components/Editor'
 import Spinner from './components/Spinner'
+import LoginModal from './components/LoginModal'
+import { useAuth } from './hooks/useAuth'
 import { generateUniqueSlug } from './utils/slug'
 import { fetchNotes, createNote, updateNote, deleteNote } from './utils/api'
+import * as localDB from './utils/local-db'
 
 function App() {
+  const { user, logout } = useAuth()
   const [notes, setNotes] = useState([])
   const [activeNote, setActiveNote] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(0)
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const loadingRef = useRef(0)
   const pendingSlugsRef = useRef(new Set())
+  const notesRef = useRef(notes)
+
+  useEffect(() => { notesRef.current = notes }, [notes])
+
+  const isPrivate = !!user
 
   const startLoading = useCallback(() => {
     loadingRef.current += 1
@@ -37,14 +47,19 @@ function App() {
   const loadNotes = useCallback(async () => {
     await wrap(async () => {
       try {
-        const data = await fetchNotes()
-        setNotes(data)
+        if (isPrivate) {
+          const data = await fetchNotes(user.ownerHash)
+          setNotes(data)
+        } else {
+          const data = await localDB.getAllNotes()
+          setNotes(data)
+        }
       } catch (error) {
         console.error('Error loading notes:', error)
         setNotes([])
       }
     })
-  }, [wrap])
+  }, [isPrivate, user, wrap])
 
   useEffect(() => {
     loadNotes()
@@ -64,7 +79,7 @@ function App() {
   const createNewNote = () => {
     const title = 'Untitled Note'
     const now = new Date().toISOString().split('T')[0]
-    const allSlugs = [...notes.map(n => n.slug), ...pendingSlugsRef.current]
+    const allSlugs = [...notesRef.current.map(n => n.slug), ...pendingSlugsRef.current]
     const slug = generateUniqueSlug(title, allSlugs)
 
     pendingSlugsRef.current.add(slug)
@@ -75,54 +90,89 @@ function App() {
   const saveNewNote = async (slug, updatedFields) => {
     const { title, body, tags } = updatedFields
     const now = new Date().toISOString().split('T')[0]
-    const allSlugs = [...notes.map(n => n.slug), ...pendingSlugsRef.current].filter(s => s !== slug)
+    const allSlugs = [...notesRef.current.map(n => n.slug), ...pendingSlugsRef.current].filter(s => s !== slug)
     const finalSlug = generateUniqueSlug(title, allSlugs)
 
     await wrap(async () => {
       try {
-        const result = await createNote({ slug: finalSlug, title, body, tags, updated: now })
         pendingSlugsRef.current.delete(slug)
-        if (finalSlug !== slug) pendingSlugsRef.current.delete(finalSlug)
-        await loadNotes()
-        setActiveNote({ title, body, tags, updated: now, slug: result.slug || finalSlug })
+        if (isPrivate) {
+          const result = await createNote({ slug: finalSlug, title, body, tags, updated: now, owner: user.ownerHash })
+          await loadNotes()
+          setActiveNote({ title, body, tags, updated: now, slug: result.slug || finalSlug, owner: user.ownerHash })
+        } else {
+          const note = { slug: finalSlug, title, body, tags, updated: now }
+          await localDB.createNote(note)
+          await loadNotes()
+          setActiveNote(note)
+        }
       } catch (error) {
-        console.error('Error creating note:', error)
+        console.error('Error saving note:', error)
       }
     })
   }
 
   const updateExistingNote = async (slug, updatedFields) => {
-    if (!notes.some(n => n.slug === slug) || pendingSlugsRef.current.has(slug)) {
+    if (pendingSlugsRef.current.has(slug)) {
       return saveNewNote(slug, updatedFields)
     }
 
-    const note = notes.find(n => n.slug === slug)
+    const note = notesRef.current.find(n => n.slug === slug)
     if (!note) return
 
     const merged = { ...note, ...updatedFields, updated: new Date().toISOString().split('T')[0] }
-    const existingSlugs = notes.map(n => n.slug).filter(s => s !== slug)
+    const existingSlugs = notesRef.current.map(n => n.slug).filter(s => s !== slug)
     const newSlug = generateUniqueSlug(merged.title, existingSlugs)
     const finalSlug = newSlug !== slug ? newSlug : null
 
-    const body = { ...updatedFields, updated: merged.updated }
-    if (finalSlug) body.newSlug = finalSlug
-
-    await wrap(async () => {
-      try {
-        const result = await updateNote(slug, body)
-        const resolvedSlug = result.slug
-        await loadNotes()
-        setActiveNote({ ...merged, slug: resolvedSlug })
-      } catch (error) {
-        console.error('Error updating note:', error)
+    if (isPrivate) {
+      const body = { ...updatedFields, updated: merged.updated, owner: user.ownerHash }
+      if (finalSlug) body.newSlug = finalSlug
+      await wrap(async () => {
+        try {
+          const result = await updateNote(slug, body)
+          const resolvedSlug = result.slug
+          await loadNotes()
+          setActiveNote({ ...merged, slug: resolvedSlug, owner: user.ownerHash })
+        } catch (error) {
+          console.error('Error updating note:', error)
+        }
+      })
+    } else {
+      if (finalSlug) {
+        merged.slug = finalSlug
+        await wrap(async () => {
+          try {
+            await localDB.deleteNote(slug)
+            await localDB.createNote(merged)
+            await loadNotes()
+            setActiveNote(merged)
+          } catch (error) {
+            console.error('Error updating note:', error)
+          }
+        })
+      } else {
+        await wrap(async () => {
+          try {
+            await localDB.updateNote(slug, { ...updatedFields, updated: merged.updated })
+            await loadNotes()
+            setActiveNote(merged)
+          } catch (error) {
+            console.error('Error updating note:', error)
+          }
+        })
       }
-    })
+    }
   }
 
   const deleteExistingNote = async (slug) => {
     await wrap(async () => {
       try {
-        await deleteNote(slug)
+        if (isPrivate) {
+          await deleteNote(slug, user.ownerHash)
+        } else {
+          await localDB.deleteNote(slug)
+        }
         await loadNotes()
         if (activeNote && activeNote.slug === slug) {
           setActiveNote(null)
@@ -146,7 +196,13 @@ function App() {
     setMobileSidebarOpen(true)
   }
 
-  const isPersisted = activeNote && notes.some(n => n.slug === activeNote.slug)
+  const handleLogout = () => {
+    pendingSlugsRef.current.clear()
+    setActiveNote(null)
+    logout()
+  }
+
+  const isPersisted = activeNote && notesRef.current.some(n => n.slug === activeNote.slug)
 
   const filteredNotes = notes.filter(note => {
     const query = searchQuery.toLowerCase()
@@ -168,26 +224,33 @@ function App() {
         activeNoteSlug={activeNote?.slug}
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
+        user={user}
+        onLoginClick={() => setShowLoginModal(true)}
+        onLogout={handleLogout}
       />
       <button className="menu-toggle" onClick={() => setMobileSidebarOpen(prev => !prev)}>
         <span></span><span></span><span></span>
       </button>
-      {activeNote ? (
-        <Editor
-          key={activeNote.slug}
-          note={activeNote}
-          onUpdate={updateExistingNote}
-          onDelete={deleteExistingNote}
-          showPreview={showPreview}
-          onCloseNote={handleCloseNote}
-          persisted={isPersisted}
-        />
-      ) : (
-        <div className="editor-empty">
-          <p>Select or create a note</p>
-        </div>
-      )}
+      <div className="app-main">
+        {activeNote ? (
+          <Editor
+            key={activeNote.slug}
+            note={activeNote}
+            onUpdate={updateExistingNote}
+            onDelete={deleteExistingNote}
+            showPreview={showPreview}
+            onCloseNote={handleCloseNote}
+            persisted={isPersisted}
+          />
+        ) : (
+          <div className="editor-empty">
+            <p>Select or create a note</p>
+          </div>
+        )}
+        <div className="app-footer">by @geduma ☕</div>
+      </div>
       {loading > 0 && <Spinner />}
+      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
     </div>
   )
 }

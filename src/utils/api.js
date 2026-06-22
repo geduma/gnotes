@@ -17,11 +17,13 @@ async function getToken() {
   return json.data.token
 }
 
-export async function fetchNotes(query) {
+export async function fetchNotes(owner, query) {
   const token = await getToken()
-  const url = query
-    ? `${API_BASE}/gnotes?q=${encodeURIComponent(query)}`
-    : `${API_BASE}/gnotes`
+  const params = new URLSearchParams()
+  if (owner) params.set('owner', owner)
+  if (query) params.set('q', query)
+  const qs = params.toString()
+  const url = qs ? `${API_BASE}/gnotes?${qs}` : `${API_BASE}/gnotes`
   const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` }
   })
@@ -31,7 +33,7 @@ export async function fetchNotes(query) {
   return json.data
 }
 
-export async function createNote({ slug, title, body, tags, updated }) {
+export async function createNote({ slug, title, body, tags, updated, owner }) {
   const token = await getToken()
   const res = await fetch(`${API_BASE}/gnotes`, {
     method: 'POST',
@@ -39,7 +41,7 @@ export async function createNote({ slug, title, body, tags, updated }) {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ slug, title, body, tags, updated })
+    body: JSON.stringify({ slug, title, body, tags, updated, owner })
   })
   const json = await res.json()
   if (!json.ok) throw new Error(json.msg)
@@ -61,9 +63,9 @@ export async function updateNote(slug, fields) {
   return json.data
 }
 
-export async function deleteNote(slug) {
+export async function deleteNote(slug, owner) {
   const token = await getToken()
-  const res = await fetch(`${API_BASE}/gnotes/${slug}`, {
+  const res = await fetch(`${API_BASE}/gnotes/${slug}?owner=${encodeURIComponent(owner)}`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
   })

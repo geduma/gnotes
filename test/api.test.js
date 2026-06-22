@@ -44,8 +44,8 @@ describe('fetchNotes', () => {
       json: () => Promise.resolve({ ok: true, msg: 'Success', data: [] })
     })
 
-    await fetchNotes('test query')
-    expect(lastUrl()).toMatch(/\/gnotes\?q=test%20query$/)
+    await fetchNotes(undefined, 'test query')
+    expect(lastUrl()).toMatch(/\/gnotes\?q=test\+query$/)
   })
 
   it('returns empty array on 204', async () => {
@@ -156,11 +156,11 @@ describe('deleteNote', () => {
       json: () => Promise.resolve({ ok: true, msg: 'Success', data: { success: true } })
     })
 
-    const result = await deleteNote('my-note')
+    const result = await deleteNote('my-note', 'hash-test')
     expect(result).toEqual({ success: true })
 
     const deleteCall = mockFetch.mock.calls[1]
-    expect(deleteCall[0]).toMatch(/\/gnotes\/my-note$/)
+    expect(deleteCall[0]).toMatch(/\/gnotes\/my-note\?owner=hash-test$/)
     expect(deleteCall[1].method).toBe('DELETE')
   })
 
