@@ -274,6 +274,82 @@ body {
   cursor: not-allowed;
 }
 
+.delete-button {
+  height: 32px;
+  padding: 6px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: #e06060;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  border-color: #e06060;
+  background: rgba(224, 96, 96, 0.1);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 300px;
+  text-align: center;
+}
+
+.modal-message {
+  color: var(--text-primary);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.modal-cancel,
+.modal-confirm {
+  height: 32px;
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.modal-cancel {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.modal-confirm {
+  background: transparent;
+  color: #e06060;
+  border-color: #e06060;
+}
+
+.modal-cancel:hover {
+  border-color: var(--accent);
+}
+
+.modal-confirm:hover {
+  background: rgba(224, 96, 96, 0.1);
+}
+
 .editor-body {
   flex: 1;
   display: flex;
@@ -372,6 +448,29 @@ body {
 }
 
 /* Responsive */
+.spinner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;

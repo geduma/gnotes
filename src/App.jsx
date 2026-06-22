@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Sidebar from './components/Sidebar'
 import Editor from './components/Editor'
+import Spinner from './components/Spinner'
 import { generateUniqueSlug } from './utils/slug'
 import { fetchNotes, createNote, updateNote, deleteNote } from './utils/api'
 
@@ -10,16 +11,40 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [loading, setLoading] = useState(0)
+  const loadingRef = useRef(0)
+  const pendingSlugsRef = useRef(new Set())
+
+  const startLoading = useCallback(() => {
+    loadingRef.current += 1
+    setLoading(loadingRef.current)
+  }, [])
+
+  const stopLoading = useCallback(() => {
+    loadingRef.current = Math.max(0, loadingRef.current - 1)
+    setLoading(loadingRef.current)
+  }, [])
+
+  const wrap = useCallback(async (fn) => {
+    startLoading()
+    try {
+      return await fn()
+    } finally {
+      stopLoading()
+    }
+  }, [startLoading, stopLoading])
 
   const loadNotes = useCallback(async () => {
-    try {
-      const data = await fetchNotes()
-      setNotes(data)
-    } catch (error) {
-      console.error('Error loading notes:', error)
-      setNotes([])
-    }
-  }, [])
+    await wrap(async () => {
+      try {
+        const data = await fetchNotes()
+        setNotes(data)
+      } catch (error) {
+        console.error('Error loading notes:', error)
+        setNotes([])
+      }
+    })
+  }, [wrap])
 
   useEffect(() => {
     loadNotes()
@@ -36,23 +61,41 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const createNewNote = async () => {
+  const createNewNote = () => {
     const title = 'Untitled Note'
     const now = new Date().toISOString().split('T')[0]
-    const existingSlugs = notes.map(n => n.slug)
-    const slug = generateUniqueSlug(title, existingSlugs)
+    const allSlugs = [...notes.map(n => n.slug), ...pendingSlugsRef.current]
+    const slug = generateUniqueSlug(title, allSlugs)
 
-    try {
-      await createNote({ slug, title, body: '', tags: [], updated: now })
-      await loadNotes()
-      const newNote = { slug, title, updated: now, tags: [], body: '' }
-      setActiveNote(newNote)
-    } catch (error) {
-      console.error('Error creating note:', error)
-    }
+    pendingSlugsRef.current.add(slug)
+    setActiveNote({ slug, title, updated: now, tags: [], body: '' })
+    setMobileSidebarOpen(false)
+  }
+
+  const saveNewNote = async (slug, updatedFields) => {
+    const { title, body, tags } = updatedFields
+    const now = new Date().toISOString().split('T')[0]
+    const allSlugs = [...notes.map(n => n.slug), ...pendingSlugsRef.current].filter(s => s !== slug)
+    const finalSlug = generateUniqueSlug(title, allSlugs)
+
+    await wrap(async () => {
+      try {
+        const result = await createNote({ slug: finalSlug, title, body, tags, updated: now })
+        pendingSlugsRef.current.delete(slug)
+        if (finalSlug !== slug) pendingSlugsRef.current.delete(finalSlug)
+        await loadNotes()
+        setActiveNote({ title, body, tags, updated: now, slug: result.slug || finalSlug })
+      } catch (error) {
+        console.error('Error creating note:', error)
+      }
+    })
   }
 
   const updateExistingNote = async (slug, updatedFields) => {
+    if (!notes.some(n => n.slug === slug) || pendingSlugsRef.current.has(slug)) {
+      return saveNewNote(slug, updatedFields)
+    }
+
     const note = notes.find(n => n.slug === slug)
     if (!note) return
 
@@ -61,35 +104,49 @@ function App() {
     const newSlug = generateUniqueSlug(merged.title, existingSlugs)
     const finalSlug = newSlug !== slug ? newSlug : null
 
-    const body = { title: merged.title, body: merged.body, tags: merged.tags, updated: merged.updated }
+    const body = { ...updatedFields, updated: merged.updated }
     if (finalSlug) body.newSlug = finalSlug
 
-    try {
-      const result = await updateNote(slug, body)
-      const resolvedSlug = result.slug
-      await loadNotes()
-      setActiveNote({ ...merged, slug: resolvedSlug })
-    } catch (error) {
-      console.error('Error updating note:', error)
-    }
+    await wrap(async () => {
+      try {
+        const result = await updateNote(slug, body)
+        const resolvedSlug = result.slug
+        await loadNotes()
+        setActiveNote({ ...merged, slug: resolvedSlug })
+      } catch (error) {
+        console.error('Error updating note:', error)
+      }
+    })
   }
 
   const deleteExistingNote = async (slug) => {
-    try {
-      await deleteNote(slug)
-      await loadNotes()
-      if (activeNote && activeNote.slug === slug) {
-        setActiveNote(null)
+    await wrap(async () => {
+      try {
+        await deleteNote(slug)
+        await loadNotes()
+        if (activeNote && activeNote.slug === slug) {
+          setActiveNote(null)
+        }
+      } catch (error) {
+        console.error('Error deleting note:', error)
       }
-    } catch (error) {
-      console.error('Error deleting note:', error)
-    }
+    })
   }
 
   const handleSelectNote = (note) => {
     setActiveNote(note)
     setMobileSidebarOpen(false)
   }
+
+  const handleCloseNote = () => {
+    if (activeNote && pendingSlugsRef.current.has(activeNote.slug)) {
+      pendingSlugsRef.current.delete(activeNote.slug)
+    }
+    setActiveNote(null)
+    setMobileSidebarOpen(true)
+  }
+
+  const isPersisted = activeNote && notes.some(n => n.slug === activeNote.slug)
 
   const filteredNotes = notes.filter(note => {
     const query = searchQuery.toLowerCase()
@@ -120,14 +177,17 @@ function App() {
           key={activeNote.slug}
           note={activeNote}
           onUpdate={updateExistingNote}
+          onDelete={deleteExistingNote}
           showPreview={showPreview}
-          onCloseNote={() => { setActiveNote(null); setMobileSidebarOpen(true) }}
+          onCloseNote={handleCloseNote}
+          persisted={isPersisted}
         />
       ) : (
         <div className="editor-empty">
           <p>Select or create a note</p>
         </div>
       )}
+      {loading > 0 && <Spinner />}
     </div>
   )
 }

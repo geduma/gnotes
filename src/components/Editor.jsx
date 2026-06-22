@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
+import ConfirmModal from './ConfirmModal'
 
-function Editor({ note, onUpdate, showPreview, onCloseNote }) {
+function Editor({ note, onUpdate, onDelete, showPreview, onCloseNote, persisted }) {
   const [title, setTitle] = useState(note.title)
   const [body, setBody] = useState(note.body)
   const [tags, setTags] = useState(note.tags || [])
   const [tagInput, setTagInput] = useState('')
   const [saved, setSaved] = useState(true)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const prevSlugRef = useRef(note.slug)
   const lastSavedRef = useRef({ title: note.title, body: note.body, tags: note.tags || [] })
 
@@ -82,6 +84,9 @@ function Editor({ note, onUpdate, showPreview, onCloseNote }) {
           >
             Save
           </button>
+          {persisted && (
+            <button className="delete-button" onClick={() => setShowDeleteModal(true)} title="Delete note">Delete</button>
+          )}
           <button className="close-button" onClick={onCloseNote} title="Close note">✕</button>
         </div>
       </div>
@@ -114,6 +119,13 @@ function Editor({ note, onUpdate, showPreview, onCloseNote }) {
           </div>
         )}
       </div>
+      {showDeleteModal && (
+        <ConfirmModal
+          message="Are you sure you want to delete this note?"
+          onConfirm={() => { setShowDeleteModal(false); onDelete(note.slug) }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
     </div>
   )
 }

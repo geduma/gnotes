@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateSlug, generateUniqueSlug } from '../utils/slug'
+import { generateSlug, generateUniqueSlug } from '../src/utils/slug'
 
 describe('generateSlug', () => {
   it('converts title to lowercase', () => {

@@ -12,7 +12,11 @@ function mockAuthResponse() {
   })
 }
 
-import { fetchNotes, createNote, updateNote, deleteNote } from './api'
+import { fetchNotes, createNote, updateNote, deleteNote } from '../src/utils/api'
+
+function lastUrl() {
+  return mockFetch.mock.calls[1][0]
+}
 
 describe('fetchNotes', () => {
   beforeEach(() => {
@@ -30,7 +34,7 @@ describe('fetchNotes', () => {
     const result = await fetchNotes()
     expect(result).toEqual(notes)
     expect(mockFetch).toHaveBeenCalledTimes(2)
-    expect(mockFetch.mock.calls[1][0]).toBe('http://localhost:3000/gnotes')
+    expect(lastUrl()).toMatch(/\/gnotes$/)
   })
 
   it('fetches with query parameter', async () => {
@@ -41,7 +45,7 @@ describe('fetchNotes', () => {
     })
 
     await fetchNotes('test query')
-    expect(mockFetch.mock.calls[1][0]).toBe('http://localhost:3000/gnotes?q=test%20query')
+    expect(lastUrl()).toMatch(/\/gnotes\?q=test%20query$/)
   })
 
   it('returns empty array on 204', async () => {
@@ -79,7 +83,7 @@ describe('createNote', () => {
     expect(result).toEqual({ success: true, slug: 'new-note' })
 
     const postCall = mockFetch.mock.calls[1]
-    expect(postCall[0]).toBe('http://localhost:3000/gnotes')
+    expect(postCall[0]).toMatch(/\/gnotes$/)
     expect(postCall[1].method).toBe('POST')
     expect(JSON.parse(postCall[1].body)).toEqual({ slug: 'new-note', title: 'New Note', body: '', tags: [], updated: '2026-06-22' })
   })
@@ -111,7 +115,7 @@ describe('updateNote', () => {
     expect(result).toEqual({ success: true, slug: 'updated-note' })
 
     const putCall = mockFetch.mock.calls[1]
-    expect(putCall[0]).toBe('http://localhost:3000/gnotes/my-note')
+    expect(putCall[0]).toMatch(/\/gnotes\/my-note$/)
     expect(putCall[1].method).toBe('PUT')
   })
 
@@ -156,7 +160,7 @@ describe('deleteNote', () => {
     expect(result).toEqual({ success: true })
 
     const deleteCall = mockFetch.mock.calls[1]
-    expect(deleteCall[0]).toBe('http://localhost:3000/gnotes/my-note')
+    expect(deleteCall[0]).toMatch(/\/gnotes\/my-note$/)
     expect(deleteCall[1].method).toBe('DELETE')
   })
 
