@@ -3,7 +3,7 @@ const API_BASE = 'https://api.geduma.com'
 const AUTH = {
   name: 'gnotes',
   user: 'geduma',
-  key: import.meta.env.VITE_AUTH_KEY
+  key: import.meta.env.VITE_API_AUTH_KEY
 }
 
 async function getToken() {
