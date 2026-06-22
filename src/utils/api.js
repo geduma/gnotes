@@ -28,6 +28,7 @@ export async function fetchNotes(owner, query) {
     headers: { 'Authorization': `Bearer ${token}` }
   })
   if (res.status === 204) return []
+  if (res.status === 429) throw new Error('Too many requests, please try again later')
   const json = await res.json()
   if (!json.ok) throw new Error(json.msg)
   return json.data
@@ -43,6 +44,7 @@ export async function createNote({ slug, title, body, tags, updated, owner }) {
     },
     body: JSON.stringify({ slug, title, body, tags, updated, owner })
   })
+  if (res.status === 429) throw new Error('Too many requests, please try again later')
   const json = await res.json()
   if (!json.ok) throw new Error(json.msg)
   return json.data
@@ -58,6 +60,7 @@ export async function updateNote(slug, fields) {
     },
     body: JSON.stringify(fields)
   })
+  if (res.status === 429) throw new Error('Too many requests, please try again later')
   const json = await res.json()
   if (!json.ok) throw new Error(json.msg)
   return json.data
@@ -69,6 +72,7 @@ export async function deleteNote(slug, owner) {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
   })
+  if (res.status === 429) throw new Error('Too many requests, please try again later')
   const json = await res.json()
   if (!json.ok) throw new Error(json.msg)
   return json.data
