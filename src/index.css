@@ -910,10 +910,25 @@ body {
   }
 
   .editor {
-    padding: 16px;
+    padding: 12px;
+  }
+
+  .editor-header {
+    gap: 8px;
   }
 
   .editor-title {
-    font-size: 20px;
+    font-size: 18px;
+    min-width: 0;
+  }
+
+  .editor-actions {
+    flex-shrink: 0;
+  }
+
+  .save-button,
+  .delete-button {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }
