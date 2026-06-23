@@ -4,7 +4,7 @@ Aplicación personal de notas minimalista, rápida y autoalojable.
 
 ## Características
 
-- Markdown puro con vista previa renderizada
+- Editor WYSIWYG con barra de formato flotante y modal para links
 - Autoguardado con debounce de 2s
 - Búsqueda de notas por título, cuerpo y tags
 - Dark mode por defecto
@@ -17,7 +17,7 @@ Aplicación personal de notas minimalista, rápida y autoalojable.
 
 - React + Vite
 - CSS puro
-- react-markdown (preview)
+- turndown (HTML → Markdown para el editor WYSIWYG)
 - Vitest (tests)
 - API REST externa (`https://api.geduma.com`)
 - Auth: OAuth (geduma-auth) + JWT single-use
@@ -57,12 +57,6 @@ La app se abre en `http://localhost:5173/`.
 npm run test        # watch mode
 npm run test:run    # una vez
 ```
-
-## Atajos
-
-| Atajo | Acción |
-|-------|--------|
-| `CMD/CTRL + .` | Toggle preview markdown |
 
 ## Variables de Entorno
 

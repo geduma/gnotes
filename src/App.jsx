@@ -13,7 +13,6 @@ function App() {
   const [notes, setNotes] = useState([])
   const [activeNote, setActiveNote] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [showPreview, setShowPreview] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(0)
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -70,17 +69,6 @@ function App() {
   useEffect(() => {
     loadNotes()
   }, [loadNotes])
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === '.') {
-        e.preventDefault()
-        setShowPreview(prev => !prev)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
 
   const createNewNote = () => {
     const title = 'Untitled Note'
@@ -244,7 +232,6 @@ function App() {
             note={activeNote}
             onUpdate={updateExistingNote}
             onDelete={deleteExistingNote}
-            showPreview={showPreview}
             onCloseNote={handleCloseNote}
             persisted={isPersisted}
           />

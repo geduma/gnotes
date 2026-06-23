@@ -24,7 +24,6 @@ function Sidebar({ notes, searchQuery, onSearchChange, onCreateNote, onSelectNot
             >
               <div className="sidebar-item-title">
                 {note.title}
-                {note.owner && <span className="note-badge" title="Private note">☁</span>}
               </div>
               <div className="sidebar-item-date">{note.updated}</div>
               {note.tags && note.tags.length > 0 && (

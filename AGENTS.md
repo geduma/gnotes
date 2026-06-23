@@ -4,7 +4,7 @@
 
 - React 18 + Vite 5 + Vitest
 - CSS puro (sin Tailwind, sin CSS-in-JS)
-- Markdown: react-markdown 9
+- Markdown: turndown (HTML→Markdown para editor WYSIWYG)
 - API externa: `https://api.geduma.com`
 - Auth: JWT single-use vía `POST /auth` + OAuth social vía `geduma-auth`
 - Almacenamiento local: IndexedDB nativo (sin librerías)
