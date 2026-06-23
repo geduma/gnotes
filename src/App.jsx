@@ -219,7 +219,7 @@ function App() {
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
         user={user}
-        onLoginClick={() => setShowLoginModal(true)}
+        onLoginClick={() => { setShowLoginModal(true); setMobileSidebarOpen(false) }}
         onLogout={handleLogout}
       />
       <button className="menu-toggle" onClick={() => setMobileSidebarOpen(prev => !prev)}>
