@@ -46,7 +46,7 @@ Se necesita una herramienta que:
 | ID | Historia | Prioridad |
 |----|----------|-----------|
 | US-01 | Como usuario, quiero crear una nota sin necesidad de cuenta. | P0 |
-| US-02 | Como usuario, quiero editar una nota en Markdown con vista previa. | P0 |
+| US-02 | Como usuario, quiero editar una nota con un editor WYSIWYG. | P0 |
 | US-03 | Como usuario, quiero autosave para no perder cambios. | P0 |
 | US-04 | Como usuario, quiero eliminar una nota que ya no necesito. | P0 |
 | US-05 | Como usuario, quiero buscar entre mis notas. | P0 |
@@ -88,7 +88,7 @@ Se necesita una herramienta que:
 | Feature | Descripción | Estado |
 |---------|-------------|--------|
 | Crear nota | Local (IndexedDB) o privada (API según login). | ✅ |
-| Editar nota | Editor + preview Markdown lado a lado. | ✅ |
+| Editar nota | Editor WYSIWYG con barra de formato flotante. | ✅ |
 | Autosave | Debounce de 2s en título, body y tags. | ✅ |
 | Guardado manual | Botón "Save". | ✅ |
 | Indicador saved/unsaved | Estado visual de cambios. | ✅ |
@@ -96,7 +96,6 @@ Se necesita una herramienta que:
 | Búsqueda | Filtra por título + body + tags. | ✅ |
 | Tags | Input tipo chips. | ✅ |
 | Renombrar | Cambiar título actualiza el slug. | ✅ |
-| Atajo teclado | `CMD/CTRL + .` toggle preview. | ✅ |
 | Dark mode | Tema oscuro por defecto. | ✅ |
 | Responsive | Breakpoint 768px. | ✅ |
 | API REST | CRUD completo con owner. | ✅ |
@@ -105,7 +104,6 @@ Se necesita una herramienta que:
 | Owner hash | SHA-256 del email, identifica notas del usuario. | ✅ |
 | Almacenamiento local | IndexedDB nativo sin librerías. | ✅ |
 | Dual source | App.jsx con lógica local/privada según auth. | ✅ |
-| Badge privada | ☁ en sidebar para notas con owner. | ✅ |
 | Spinner global | Loading overlay en llamadas API. | ✅ |
 
 ### 5.2 Futuras (Roadmap)
@@ -131,7 +129,7 @@ Se necesita una herramienta que:
 |------|-----------|---------------|
 | Frontend | React 18 + Vite 5 | Rápido, HMR, ecosistema maduro. |
 | Estilos | CSS puro | Sin dependencias, control total. |
-| Markdown | react-markdown 9 | Preview client-side. |
+| Markdown | turndown | HTML→Markdown para editor WYSIWYG. |
 | API | REST (`api.geduma.com`) | MongoDB con owner y JWT. |
 | Auth OAuth | geduma-auth | OAuth social centralizado. |
 | Auth JWT | POST /auth | Token single-use por operación. |
@@ -277,13 +275,20 @@ Se necesita una herramienta que:
 - [x] Owner hash SHA-256 en cada nota.
 - [x] Almacenamiento local IndexedDB.
 - [x] Lógica dual local/privada en App.jsx.
-- [x] Badge ☁ para notas privadas en sidebar.
 - [x] Modal de providers OAuth dinámicos.
 - [x] Spinner global en llamadas API.
 - [x] Footer "by @geduma ☕".
 - [x] Tests de hash.
 
-### Próximo release (v0.3.0)
+### v0.3.0
+
+- [x] Editor WYSIWYG con barra de formato flotante (Bold, Italic, H1-H3, listas, blockquote, link, code).
+- [x] Turndown para conversión HTML→Markdown al guardar.
+- [x] Modal de link (URL + text) en toolbar.
+- [x] Eliminada dependencia react-markdown (~79 paquetes menos).
+- [x] Bundle reducido de ~274KB a ~170KB.
+
+### Próximo release (v0.4.0)
 
 - [ ] Estructura de carpetas en sidebar.
 - [ ] Atajo `CMD + N` para nueva nota.
@@ -294,7 +299,6 @@ Se necesita una herramienta que:
 
 ## 10. Fuera de Alcance (v1.0)
 
-- Editor WYSIWYG (el Markdown raw es intencional).
 - Colaboración multiusuario en tiempo real.
 - Aplicación mobile nativa.
 - Sincronización entre local y cloud.

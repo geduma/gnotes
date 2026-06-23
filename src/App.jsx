@@ -13,10 +13,10 @@ function App() {
   const [notes, setNotes] = useState([])
   const [activeNote, setActiveNote] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [showPreview, setShowPreview] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(0)
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [error, setError] = useState(null)
   const loadingRef = useRef(0)
   const pendingSlugsRef = useRef(new Set())
   const notesRef = useRef(notes)
@@ -45,17 +45,22 @@ function App() {
   }, [startLoading, stopLoading])
 
   const loadNotes = useCallback(async () => {
+    setError(null)
     await wrap(async () => {
       try {
         if (isPrivate) {
+          if (!user?.ownerHash) {
+            throw new Error('User data is incomplete — missing owner identifier')
+          }
           const data = await fetchNotes(user.ownerHash)
           setNotes(data)
         } else {
           const data = await localDB.getAllNotes()
           setNotes(data)
         }
-      } catch (error) {
-        console.error('Error loading notes:', error)
+      } catch (err) {
+        console.error('Error loading notes:', err)
+        setError(err.message || 'Failed to load notes')
         setNotes([])
       }
     })
@@ -64,17 +69,6 @@ function App() {
   useEffect(() => {
     loadNotes()
   }, [loadNotes])
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === '.') {
-        e.preventDefault()
-        setShowPreview(prev => !prev)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
 
   const createNewNote = () => {
     const title = 'Untitled Note'
@@ -238,13 +232,19 @@ function App() {
             note={activeNote}
             onUpdate={updateExistingNote}
             onDelete={deleteExistingNote}
-            showPreview={showPreview}
             onCloseNote={handleCloseNote}
             persisted={isPersisted}
           />
         ) : (
           <div className="editor-empty">
-            <p>Select or create a note</p>
+            {error ? (
+              <div className="error-banner">
+                <p>{error}</p>
+                <button className="error-retry" onClick={loadNotes}>Retry</button>
+              </div>
+            ) : (
+              <p>Select or create a note</p>
+            )}
           </div>
         )}
         <div className="app-footer">by @geduma ☕</div>
