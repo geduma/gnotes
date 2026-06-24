@@ -402,18 +402,20 @@ body {
 }
 
 .modal-cancel,
-.modal-confirm {
+.modal-confirm,
+.modal-save {
   height: 32px;
   padding: 6px 16px;
-  border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 13px;
   cursor: pointer;
+  border: 1px solid var(--border);
 }
 
 .modal-cancel {
-  background: transparent;
+  background: var(--surface);
   color: var(--text-primary);
+  font-family: inherit;
 }
 
 .modal-confirm {
@@ -422,12 +424,23 @@ body {
   border-color: #e06060;
 }
 
+.modal-save {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 500;
+  border-color: var(--accent);
+}
+
 .modal-cancel:hover {
   border-color: var(--accent);
 }
 
 .modal-confirm:hover {
   background: rgba(224, 96, 96, 0.1);
+}
+
+.modal-save:hover {
+  opacity: 0.85;
 }
 
 .link-modal {
