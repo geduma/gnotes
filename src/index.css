@@ -80,10 +80,33 @@ body {
   border-color: var(--accent);
 }
 
-.sidebar-new {
-  width: 100%;
-  padding: 8px;
+.sidebar-header-actions {
+  display: flex;
+  gap: 6px;
   margin-top: 8px;
+}
+
+.sidebar-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.sidebar-refresh:hover {
+  border-color: var(--accent);
+}
+
+.sidebar-new {
+  flex: 1;
+  padding: 8px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -666,7 +689,7 @@ body {
   overflow-y: auto;
   padding: 0 4px;
   color: var(--text-primary);
-  line-height: 1.7;
+  line-height: 1.4;
   font-size: 16px;
   outline: none;
   min-height: 100px;
@@ -684,8 +707,8 @@ body {
 .editor-wysiwyg h4,
 .editor-wysiwyg h5,
 .editor-wysiwyg h6 {
-  margin-top: 24px;
-  margin-bottom: 12px;
+  margin-top: 12px;
+  margin-bottom: 4px;
   font-weight: 600;
   line-height: 1.3;
 }
@@ -696,7 +719,7 @@ body {
 .editor-wysiwyg h4 { font-size: 16px; }
 
 .editor-wysiwyg p {
-  margin-bottom: 16px;
+  margin-bottom: 6px;
 }
 
 .editor-wysiwyg strong { font-weight: 600; }
@@ -714,14 +737,14 @@ body {
 .editor-wysiwyg hr {
   border: none;
   border-top: 1px solid var(--border);
-  margin: 24px 0;
+  margin: 16px 0;
 }
 
 .editor-wysiwyg img {
   max-width: 100%;
   height: auto;
   border-radius: 4px;
-  margin: 16px 0;
+  margin: 10px 0;
 }
 
 .editor-wysiwyg code {
@@ -734,10 +757,10 @@ body {
 
 .editor-wysiwyg pre {
   background: var(--surface);
-  padding: 16px;
+  padding: 10px;
   border-radius: 4px;
   overflow-x: auto;
-  margin-bottom: 16px;
+  margin-bottom: 6px;
 }
 
 .editor-wysiwyg pre code {
@@ -750,24 +773,24 @@ body {
 .editor-wysiwyg ul,
 .editor-wysiwyg ol {
   padding-left: 24px;
-  margin-bottom: 16px;
+  margin-bottom: 6px;
 }
 
 .editor-wysiwyg li {
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .editor-wysiwyg blockquote {
   border-left: 3px solid var(--border);
   padding-left: 16px;
   color: var(--text-secondary);
-  margin: 16px 0;
+  margin: 6px 0;
 }
 
 .editor-wysiwyg table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 16px;
+  margin-bottom: 6px;
 }
 
 .editor-wysiwyg th,
@@ -786,9 +809,10 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 0 4px;
-  border-top: 1px solid var(--border);
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
 .tb-btn {

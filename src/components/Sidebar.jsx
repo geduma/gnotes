@@ -1,4 +1,4 @@
-function Sidebar({ notes, searchQuery, onSearchChange, onCreateNote, onSelectNote, activeNoteSlug, isOpen, onClose, user, onLoginClick, onLogout }) {
+function Sidebar({ notes, searchQuery, onSearchChange, onCreateNote, onSelectNote, activeNoteSlug, isOpen, onClose, user, onLoginClick, onLogout, onRefreshNotes }) {
   return (
     <>
       <div className={`sidebar-backdrop ${isOpen ? 'visible' : ''}`} onClick={onClose} />
@@ -11,9 +11,14 @@ function Sidebar({ notes, searchQuery, onSearchChange, onCreateNote, onSelectNot
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />
-          <button className="sidebar-new" onClick={onCreateNote}>
-            New Note
-          </button>
+          <div className="sidebar-header-actions">
+            {user && (
+              <button className="sidebar-refresh" onClick={onRefreshNotes} title="Refresh notes">↻</button>
+            )}
+            <button className="sidebar-new" onClick={onCreateNote}>
+              New Note
+            </button>
+          </div>
         </div>
         <div className="sidebar-list">
           {notes.map((note) => (

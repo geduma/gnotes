@@ -6,12 +6,13 @@ const turndown = new TurndownService({
   headingStyle: 'atx',
   codeBlockStyle: 'fenced',
   emDelimiter: '*',
-  strongDelimiter: '**'
+  strongDelimiter: '**',
+  bulletListMarker: '-'
 })
 
 function mdToHtml(md) {
   if (!md) return ''
-  let html = md
+  let html = md.replace(/\r\n/g, '\n').replace(/\r/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -30,10 +31,82 @@ function mdToHtml(md) {
     .replace(/^-{3,}$/gm, '<hr>')
   html = html.split(/\n\n+/).map(block => {
     if (/^<h[1-3]|<pre|<blockquote|<hr|<li|<ul|<ol/i.test(block)) return block
-    if (/^\d+\. /.test(block) || /^[-*] /.test(block)) return block
+    if (/^\d+\. /.test(block) || /^[-*] /.test(block)) {
+      const lines = block.split('\n')
+      let idx = 0
+      function processLevel(baseIndent) {
+        let result = ''
+        let currentTag = null
+        while (idx < lines.length) {
+          const line = lines[idx]
+          const indent = (line.match(/^(\s*)/) || ['', ''])[1].length
+          if (indent < baseIndent) break
+          const ulMatch = line.match(/^(\s*)([*-]) (.+)$/)
+          const olMatch = line.match(/^(\s*)(\d+)\. (.+)$/)
+          if (!ulMatch && !olMatch) { idx++; break }
+          const tag = ulMatch ? 'ul' : 'ol'
+          const content = ((ulMatch || olMatch)[3]).trim()
+          if (currentTag && currentTag !== tag) {
+            result += `</${currentTag}>\n`
+            currentTag = null
+          }
+          if (!currentTag) {
+            currentTag = tag
+            result += `<${tag}>\n`
+          }
+          idx++
+          const nextIndent = idx < lines.length
+            ? (lines[idx].match(/^(\s*)/) || ['', ''])[1].length
+            : -1
+          if (nextIndent > indent) {
+            result += `<li>${inlineMd(content)}\n`
+            result += processLevel(nextIndent)
+            result += `</li>\n`
+          } else {
+            result += `<li>${inlineMd(content)}</li>\n`
+          }
+        }
+        if (currentTag) result += `</${currentTag}>\n`
+        return result
+      }
+      return processLevel(0)
+    }
     return `<p>${block.replace(/\n/g, '<br>')}</p>`
   }).join('\n')
   return html
+}
+
+function inlineMd(text) {
+  return text
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/~~(.+?)~~/g, '<s>$1</s>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+}
+
+function fixListDom(root) {
+  const lists = root.querySelectorAll('ul, ol')
+  for (let i = lists.length - 1; i >= 0; i--) {
+    const list = lists[i]
+    const children = list.children
+    for (let j = 0; j < children.length; j++) {
+      const child = children[j]
+      if (child.tagName === 'UL' || child.tagName === 'OL') {
+        const prev = child.previousElementSibling
+        if (prev && prev.tagName === 'LI') {
+          prev.appendChild(child)
+        } else {
+          const li = document.createElement('li')
+          list.insertBefore(li, child)
+          li.appendChild(child)
+        }
+        j--
+      }
+    }
+  }
 }
 
 function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
@@ -50,6 +123,7 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const linkUrlRef = useRef(null)
   const editorRef = useRef(null)
   const mountedRef = useRef(false)
+  const fixingRef = useRef(false)
   const prevSlugRef = useRef(note.slug)
   const lastSavedRef = useRef({ title: note.title, body: note.body, tags: note.tags || [] })
   useEffect(() => {
@@ -80,8 +154,11 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   }, [note.slug, title, body, tags, onUpdate])
 
   const syncFromEditor = useCallback(() => {
-    if (!editorRef.current) return
+    if (!editorRef.current || fixingRef.current) return
+    fixingRef.current = true
+    fixListDom(editorRef.current)
     const html = editorRef.current.innerHTML
+    fixingRef.current = false
     if (!html || html === '<br>') {
       setBody('')
     } else {
@@ -100,6 +177,19 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     fn()
     syncFromEditor()
   }, [syncFromEditor])
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      cmd(() => {
+        if (e.shiftKey) {
+          document.execCommand('outdent')
+        } else {
+          document.execCommand('indent')
+        }
+      })
+    }
+  }, [cmd])
 
   return (
     <div className="editor">
@@ -144,15 +234,6 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
           placeholder="Add tag..."
         />
       </div>
-      <div className="editor-body">
-        <div
-          ref={editorRef}
-          className="editor-wysiwyg"
-          contentEditable
-          suppressContentEditableWarning
-          onInput={handleInput}
-        />
-      </div>
       <div className="editor-toolbar">
         <button className="tb-btn" onClick={() => cmd(() => document.execCommand('bold'))} title="Bold"><strong>B</strong></button>
         <button className="tb-btn" onClick={() => cmd(() => document.execCommand('italic'))} title="Italic"><em>I</em></button>
@@ -183,6 +264,16 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
         <button className="tb-btn" onClick={() => cmd(() => {
           document.execCommand('insertHTML', false, '<pre><code>code</code></pre>')
         })} title="Code block">{"{ }"}</button>
+      </div>
+      <div className="editor-body">
+        <div
+          ref={editorRef}
+          className="editor-wysiwyg"
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+        />
       </div>
       {showLinkModal && (
         <div className="modal-overlay" onClick={() => setShowLinkModal(false)}>
