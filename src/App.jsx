@@ -81,7 +81,7 @@ function App() {
     setMobileSidebarOpen(false)
   }
 
-  const saveNewNote = async (slug, updatedFields) => {
+  const saveNewNote = useCallback(async (slug, updatedFields) => {
     const { title, body, tags } = updatedFields
     const now = new Date().toISOString().split('T')[0]
     const allSlugs = [...notesRef.current.map(n => n.slug), ...pendingSlugsRef.current].filter(s => s !== slug)
@@ -102,17 +102,21 @@ function App() {
         }
       } catch (error) {
         console.error('Error saving note:', error)
+        setError(error.message || 'Failed to save note')
       }
     })
-  }
+  }, [wrap, isPrivate, user, loadNotes, setActiveNote])
 
-  const updateExistingNote = async (slug, updatedFields) => {
+  const updateExistingNote = useCallback(async (slug, updatedFields) => {
     if (pendingSlugsRef.current.has(slug)) {
       return saveNewNote(slug, updatedFields)
     }
 
     const note = notesRef.current.find(n => n.slug === slug)
-    if (!note) return
+    if (!note) {
+      setError(`Note with slug "${slug}" not found`)
+      return
+    }
 
     const merged = { ...note, ...updatedFields, updated: new Date().toISOString().split('T')[0] }
     const existingSlugs = notesRef.current.map(n => n.slug).filter(s => s !== slug)
@@ -130,6 +134,7 @@ function App() {
           setActiveNote({ ...merged, slug: resolvedSlug, owner: user.ownerHash })
         } catch (error) {
           console.error('Error updating note:', error)
+          setError(error.message || 'Failed to update note')
         }
       })
     } else {
@@ -143,6 +148,7 @@ function App() {
             setActiveNote(merged)
           } catch (error) {
             console.error('Error updating note:', error)
+            setError(error.message || 'Failed to update note')
           }
         })
       } else {
@@ -153,13 +159,14 @@ function App() {
             setActiveNote(merged)
           } catch (error) {
             console.error('Error updating note:', error)
+            setError(error.message || 'Failed to update note')
           }
         })
       }
     }
-  }
+  }, [saveNewNote, wrap, isPrivate, user, loadNotes, setActiveNote])
 
-  const deleteExistingNote = async (slug) => {
+  const deleteExistingNote = useCallback(async (slug) => {
     await wrap(async () => {
       try {
         if (isPrivate) {
@@ -173,9 +180,10 @@ function App() {
         }
       } catch (error) {
         console.error('Error deleting note:', error)
+        setError(error.message || 'Failed to delete note')
       }
     })
-  }
+  }, [wrap, isPrivate, user, loadNotes, activeNote, setActiveNote])
 
   const handleSelectNote = (note) => {
     setActiveNote(note)
@@ -227,14 +235,22 @@ function App() {
       </button>
       <div className="app-main">
         {activeNote ? (
-          <Editor
-            key={activeNote.slug}
-            note={activeNote}
-            onUpdate={updateExistingNote}
-            onDelete={deleteExistingNote}
-            onCloseNote={handleCloseNote}
-            persisted={isPersisted}
-          />
+          <>
+            {error && (
+              <div className="error-banner-editor">
+                <span>{error}</span>
+                <button className="error-dismiss" onClick={() => setError(null)}>✕</button>
+              </div>
+            )}
+            <Editor
+              key={activeNote.slug}
+              note={activeNote}
+              onUpdate={updateExistingNote}
+              onDelete={deleteExistingNote}
+              onCloseNote={handleCloseNote}
+              persisted={isPersisted}
+            />
+          </>
         ) : (
           <div className="editor-empty">
             {error ? (
