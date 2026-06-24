@@ -44,11 +44,14 @@ gnotes/
 - **Sidebar + Editor**: componentes puramente presentacionales, reciben props. `App.jsx` maneja todo el estado y la lógica de negocio.
 - **Autosave**: `Editor.jsx` maneja debounce de 2s con `useEffect` + `setTimeout`. Compara con `prevSlugRef` y `lastSavedRef` para detectar cambios reales.
 - **Key en Editor**: `<Editor key={activeNote.slug}>` fuerza remount al cambiar de nota.
+- **useCallback en props de Editor**: `updateExistingNote`, `saveNewNote` y `deleteExistingNote` están envueltas en `useCallback` para evitar reseteos del debounce del Editor en cada render de App.
+- **Errores visibles**: toda operación API que falle debe llamar a `setError()` para que el usuario vea el error. Nunca silenciar con `console.error` únicamente.
 - **API calls**: fetch nativo desde `utils/api.js`, JWT single-use (refresh antes de cada request). Owner se pasa en cada endpoint.
 - **Slugs**: `generateUniqueSlug(title, existingSlugs)` desde `utils/slug.js`.
 - **Búsqueda**: client-side (filtra por title + body + tags).
 - **Dos fuentes de datos**: sin usuario logueado usa IndexedDB local; logueado usa API con ownerHash.
 - **Notas nuevas**: se crean localmente (sin API). Se persisten al primer edit (autosave).
+- **LoginModal con spinner**: al cargar providers (inline) y al hacer clic en un provider (spinner en botón + deshabilitar todos los demás).
 
 ## API - Auth (geduma-auth)
 
@@ -86,7 +89,7 @@ Funciones en `src/utils/local-db.js`:
 ## Variables de Entorno
 
 ```
-VITE_AUTH_KEY=...              # API key para POST /auth
+VITE_API_AUTH_KEY=...          # API key para POST /auth
 VITE_APP_ID=app_mqpon84ym0hbvi # App ID para geduma-auth
 ```
 

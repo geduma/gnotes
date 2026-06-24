@@ -547,6 +547,20 @@ body {
   flex-direction: column;
   gap: 8px;
   margin-bottom: 20px;
+  min-height: 44px;
+}
+
+.login-providers-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 0;
+}
+
+.login-providers-loading .spinner {
+  width: 24px;
+  height: 24px;
+  border-width: 2px;
 }
 
 .provider-button {
@@ -563,9 +577,25 @@ body {
   cursor: pointer;
 }
 
-.provider-button:hover {
+.provider-button:hover:not(:disabled) {
   border-color: var(--accent);
   background: var(--bg);
+}
+
+.provider-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.provider-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 
 .provider-icon {
@@ -578,6 +608,37 @@ body {
 .login-cancel {
   display: block;
   margin: 0 auto;
+}
+
+.login-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-banner-editor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  color: #ff6b6b;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.error-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 8px;
+  line-height: 1;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.error-dismiss:hover {
+  color: var(--text-primary);
 }
 
 .editor-body {

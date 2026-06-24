@@ -105,6 +105,7 @@ Se necesita una herramienta que:
 | Almacenamiento local | IndexedDB nativo sin librerías. | ✅ |
 | Dual source | App.jsx con lógica local/privada según auth. | ✅ |
 | Spinner global | Loading overlay en llamadas API. | ✅ |
+| Spinner providers | Inline en LoginModal (carga y login). | ✅ |
 
 ### 5.2 Futuras (Roadmap)
 
@@ -184,7 +185,7 @@ Se necesita una herramienta que:
 - JWT single-use en cada operación API.
 - Login OAuth vía geduma-auth (session_token single-use).
 - Owner hash SHA-256 del email.
-- API Key en frontend (`VITE_AUTH_KEY`).
+- API Key en frontend (`VITE_API_AUTH_KEY`).
 - HTTPS en producción.
 
 ---
