@@ -43,15 +43,18 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const [tagInput, setTagInput] = useState('')
   const [saved, setSaved] = useState(true)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showCloseModal, setShowCloseModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [linkText, setLinkText] = useState('')
   const linkUrlRef = useRef(null)
   const editorRef = useRef(null)
+  const mountedRef = useRef(false)
   const prevSlugRef = useRef(note.slug)
   const lastSavedRef = useRef({ title: note.title, body: note.body, tags: note.tags || [] })
   useEffect(() => {
-    if (prevSlugRef.current !== note.slug) {
+    if (!mountedRef.current || prevSlugRef.current !== note.slug) {
+      mountedRef.current = true
       setTitle(note.title)
       setTags(note.tags || [])
       setSaved(true)
@@ -68,20 +71,12 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     const lastSaved = lastSavedRef.current
     const hasChanges = title !== lastSaved.title || body !== lastSaved.body || JSON.stringify(tags) !== JSON.stringify(lastSaved.tags)
     setSaved(!hasChanges)
-    const timer = setTimeout(() => {
-      if (hasChanges) {
-        onUpdate(note.slug, { title, body, tags })
-        lastSavedRef.current = { title, body, tags }
-        setSaved(true)
-      }
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [title, body, tags, note.slug, onUpdate])
+  }, [title, body, tags])
 
-  const saveNow = useCallback(() => {
-    onUpdate(note.slug, { title, body, tags })
-    lastSavedRef.current = { title, body, tags }
+  const saveNow = useCallback(async () => {
     setSaved(true)
+    await onUpdate(note.slug, { title, body, tags })
+    lastSavedRef.current = { title, body, tags }
   }, [note.slug, title, body, tags, onUpdate])
 
   const syncFromEditor = useCallback(() => {
@@ -121,7 +116,7 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
           {persisted && (
             <button className="delete-button" onClick={() => setShowDeleteModal(true)} title="Delete note">Delete</button>
           )}
-          <button className="close-button" onClick={onCloseNote} title="Close note">✕</button>
+          <button className="close-button" onClick={() => { if (!saved) { setShowCloseModal(true) } else { onCloseNote() } }} title="Close note">✕</button>
         </div>
       </div>
       <div className="editor-tags">
@@ -236,9 +231,21 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
           </div>
         </div>
       )}
+      {showCloseModal && (
+        <div className="modal-overlay" onClick={() => setShowCloseModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <p className="modal-message">You have unsaved changes</p>
+            <div className="modal-actions">
+              <button className="modal-cancel" onClick={() => { setShowCloseModal(false); onCloseNote() }}>Cancelar</button>
+              <button className="modal-cancel" onClick={async () => { await saveNow(); setShowCloseModal(false); onCloseNote() }}>Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {showDeleteModal && (
         <ConfirmModal
           message="Are you sure you want to delete this note?"
+          confirmLabel="Delete"
           onConfirm={() => { setShowDeleteModal(false); onDelete(note.slug) }}
           onCancel={() => setShowDeleteModal(false)}
         />
