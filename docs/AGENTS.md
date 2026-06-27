@@ -64,6 +64,8 @@ GET  /auth/session/{sessionToken}   → Datos del usuario (single-use)
 Base URL: `https://api.geduma.com`
 APP_ID: desde `VITE_APP_ID` en `.env`
 
+⚠️ El `session_token` se recibe como **fragmento (hash)** de la URL, no como query param. Se lee desde el cliente con `window.location.hash` + `URLSearchParams`, sin viajar al servidor. Ej: `https://miapp.com/callback#session_token=uuid-xxx`
+
 ## API - Notas
 
 | Método | Ruta | Auth | Body/Params |

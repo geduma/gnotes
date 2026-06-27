@@ -27,7 +27,8 @@ export function useAuth() {
   const [providers, setProviders] = useState([])
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
+    const hash = window.location.hash.substring(1)
+    const params = new URLSearchParams(hash)
     const sessionToken = params.get('session_token')
     if (sessionToken) {
       window.history.replaceState({}, '', window.location.pathname)
