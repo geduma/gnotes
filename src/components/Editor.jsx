@@ -1,81 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import TurndownService from 'turndown'
 import ConfirmModal from './ConfirmModal'
 import { renderMarkdown } from '../utils/markdown'
-import { isCompletedBlockPattern, isCompletedInlinePattern, resolveCaretOffset } from '../utils/autoformat'
-
-const turndown = new TurndownService({
-  headingStyle: 'atx',
-  codeBlockStyle: 'fenced',
-  emDelimiter: '*',
-  strongDelimiter: '**',
-  bulletListMarker: '-'
-})
-
-turndown.addRule('strikethrough', {
-  filter: ['s', 'del'],
-  replacement: function (content) {
-    return '~~' + content + '~~'
-  }
-})
-
-turndown.addRule('taskListCheckbox', {
-  filter: node => node.nodeName === 'INPUT' && node.getAttribute('type') === 'checkbox',
-  replacement: function (content, node) {
-    return node.checked ? '[x] ' : '[ ] '
-  }
-})
-
-turndown.addRule('table', {
-  filter: node => node.nodeName === 'TABLE',
-  replacement: function (content) {
-    const rows = []
-    nodeLoop: for (let i = 0; i < node.children.length; i++) {
-      const tr = node.children[i]
-      if (tr.nodeName === 'THEAD' || tr.nodeName === 'TBODY') {
-        for (let j = 0; j < tr.children.length; j++) {
-          rows.push(cellsToRow(tr.children[j]))
-        }
-      } else if (tr.nodeName === 'TR') {
-        rows.push(cellsToRow(tr))
-      }
-    }
-    if (!rows.length) return ''
-    let output = '| ' + rows[0].map((c) => c.text).join(' | ') + ' |\n'
-    output += '| ' + rows[0].map((c) => c.align).join(' | ') + ' |\n'
-    for (let i = 1; i < rows.length; i++) {
-      output += '| ' + rows[i].map((c) => c.text).join(' | ') + ' |\n'
-    }
-    return output.trim() + '\n\n'
-  }
-})
-
-function cellsToRow(tr) {
-  const cells = []
-  for (let i = 0; i < tr.children.length; i++) {
-    const cell = tr.children[i]
-    const align = cell.align || ''
-    const alignDelimiter = align === 'left' ? ':---' : align === 'right' ? '---:' : align === 'center' ? ':---:' : '---'
-    cells.push({
-      text: inlineToMarkdown(cell.innerHTML),
-      align: alignDelimiter
-    })
-  }
-  return cells
-}
-
-function inlineToMarkdown(html) {
-  if (!html) return ''
-  return html
-    .replace(/<strong>/g, '**')
-    .replace(/<\/strong>/g, '**')
-    .replace(/<em>/g, '*')
-    .replace(/<\/em>/g, '*')
-    .replace(/<code>/g, '`')
-    .replace(/<\/code>/g, '`')
-    .replace(/<a[^>]*>(.*?)<\/a>/g, '[$1](url)')
-    .replace(/<[^>]+>/g, '')
-}
+import { htmlToMarkdown } from '../utils/html-to-markdown'
+import { isCompletedBlockPattern, isCompletedInlinePattern, resolveCaretOffset, isTableHeader, buildTableMarkdown } from '../utils/autoformat'
 
 function fixListDom(root) {
   const lists = root.querySelectorAll('ul, ol')
@@ -257,6 +184,60 @@ function outdentListItem() {
   placeCaretInLi(li)
 }
 
+function getColumnCount(table) {
+  const firstRow = table.querySelector('thead tr, tbody tr')
+  return firstRow ? firstRow.children.length : 0
+}
+
+function getOrCreateTbody(table) {
+  let tbody = table.querySelector('tbody')
+  if (!tbody) {
+    tbody = document.createElement('tbody')
+    table.appendChild(tbody)
+  }
+  return tbody
+}
+
+function insertTableRow(table, above) {
+  const count = Math.max(getColumnCount(table), 1)
+  const row = document.createElement('tr')
+  for (let i = 0; i < count; i++) {
+    const td = document.createElement('td')
+    td.appendChild(document.createTextNode('\u00A0'))
+    row.appendChild(td)
+  }
+  const tbody = getOrCreateTbody(table)
+  if (above) {
+    const first = tbody.querySelector('tr')
+    if (first) first.parentNode.insertBefore(row, first)
+    else tbody.appendChild(row)
+  } else {
+    tbody.appendChild(row)
+  }
+  return row
+}
+
+function insertTableColumn(table, before) {
+  const rows = table.querySelectorAll('thead tr, tbody tr')
+  for (let i = 0; i < rows.length; i++) {
+    const tr = rows[i]
+    const isHeader = tr.parentNode && tr.parentNode.tagName === 'THEAD'
+    const cell = document.createElement(isHeader ? 'th' : 'td')
+    cell.appendChild(document.createTextNode('\u00A0'))
+    if (before) tr.insertBefore(cell, tr.firstChild)
+    else tr.appendChild(cell)
+  }
+}
+
+function nearestTable(node) {
+  let el = node && node.nodeType === Node.ELEMENT_NODE ? node : (node && node.parentNode)
+  while (el && el.nodeType === Node.ELEMENT_NODE) {
+    if (el.tagName === 'TABLE') return el
+    el = el.parentNode
+  }
+  return null
+}
+
 function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const [title, setTitle] = useState(note.title)
   const [body, setBody] = useState(note.body)
@@ -268,11 +249,15 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [linkText, setLinkText] = useState('')
+  const [mode, setMode] = useState('edit')
+  const [tableHover, setTableHover] = useState(null)
   const linkUrlRef = useRef(null)
+  const tableLeaveTimerRef = useRef(null)
   const editorRef = useRef(null)
   const mountedRef = useRef(false)
   const fixingRef = useRef(false)
   const prevSlugRef = useRef(note.slug)
+  const prevModeRef = useRef('edit')
   const lastSavedRef = useRef({ title: note.title, body: note.body, tags: note.tags || [] })
   useEffect(() => {
     if (!mountedRef.current || prevSlugRef.current !== note.slug) {
@@ -283,6 +268,7 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
       lastSavedRef.current = { title: note.title, body: note.body, tags: note.tags || [] }
       prevSlugRef.current = note.slug
       setBody(note.body)
+      setMode('edit')
       if (editorRef.current) {
         editorRef.current.innerHTML = renderMarkdown(note.body) || '<br>'
       }
@@ -294,6 +280,14 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     const hasChanges = title !== lastSaved.title || body !== lastSaved.body || JSON.stringify(tags) !== JSON.stringify(lastSaved.tags)
     setSaved(!hasChanges)
   }, [title, body, tags])
+
+  useEffect(() => {
+    if (prevModeRef.current === 'markdown' && mode === 'edit' && editorRef.current) {
+      editorRef.current.innerHTML = renderMarkdown(body) || '<br>'
+    }
+    prevModeRef.current = mode
+  }, [mode, body])
+
   const saveNow = useCallback(async () => {
     setSaved(true)
     await onUpdate(note.slug, { title, body, tags })
@@ -308,7 +302,7 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     } catch {}
     const html = el.innerHTML
     if (!html || html === '<br>') return ''
-    return turndown.turndown(html)
+    return htmlToMarkdown(html)
   }, [])
 
   const syncFromEditor = useCallback(() => {
@@ -332,12 +326,38 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     }
     if (!blockType && !inline) return false
     const oldBlockText = goal.blockText
-    const rendered = renderMarkdown(oldBlockText)
+    let rendered = ''
+    let scope = null
+    let startIndex = -1
+    if (blockType === 'table' && goal.block.parentNode) {
+      const prev = goal.block.previousElementSibling
+      const prevText = (prev && prev.textContent || '').trim()
+      if (prev && isTableHeader(prevText)) {
+        scope = goal.block.parentNode
+        startIndex = Array.prototype.indexOf.call(scope.children, prev)
+        rendered = renderMarkdown(buildTableMarkdown(prevText, oldBlockText))
+      }
+    }
+    if (!rendered) rendered = renderMarkdown(oldBlockText)
     if (!rendered) return false
     let caretTarget = null
     fixingRef.current = true
     try {
-      if (goal.block === el) {
+      if (scope) {
+        const endIndex = Array.prototype.indexOf.call(scope.children, goal.block)
+        const count = endIndex - startIndex + 1
+        const anchor = scope.children[endIndex + 1] || null
+        for (let i = 0; i < count; i++) {
+          const n = scope.children[startIndex]
+          if (n && n.parentNode) n.parentNode.removeChild(n)
+        }
+        const template = document.createElement('div')
+        template.innerHTML = rendered.trim() + '<p><br></p>'
+        const fragment = document.createDocumentFragment()
+        while (template.firstChild) fragment.appendChild(template.firstChild)
+        scope.insertBefore(fragment, anchor)
+        caretTarget = scope.querySelector('table tbody tr td, table thead tr th')
+      } else if (goal.block === el) {
         el.innerHTML = rendered
         caretTarget = el.querySelector('p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, ul, ol')
       } else {
@@ -386,6 +406,98 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
       })
     }
   }, [cmd])
+
+  const toggleMode = useCallback(() => {
+    if (mode === 'edit') {
+      setMode('markdown')
+      try {
+        syncFromEditor()
+      } catch {
+        setBody(editorRef.current ? editorRef.current.innerText : body)
+      }
+    } else {
+      setMode('edit')
+    }
+  }, [mode, syncFromEditor, body])
+
+  const handleEditorMouseMove = useCallback((e) => {
+    if (tableLeaveTimerRef.current) {
+      clearTimeout(tableLeaveTimerRef.current)
+      tableLeaveTimerRef.current = null
+    }
+    if (mode !== 'edit') {
+      if (tableHover) setTableHover(null)
+      return
+    }
+    const table = nearestTable(e.target)
+    if (!table) {
+      if (tableHover) setTableHover(null)
+      return
+    }
+    const rect = table.getBoundingClientRect()
+    const edge = 28
+    let zone = null
+    if (e.clientX > rect.left && e.clientX < rect.right) {
+      if (e.clientY - rect.top <= edge) zone = 'top'
+      else if (rect.bottom - e.clientY <= edge) zone = 'bottom'
+    }
+    if (e.clientY > rect.top && e.clientY < rect.bottom) {
+      if (e.clientX - rect.left <= edge) zone = 'left'
+      else if (rect.right - e.clientX <= edge) zone = 'right'
+    }
+    if (zone) {
+      setTableHover({ table, zone, rect })
+    } else {
+      setTableHover(null)
+    }
+  }, [mode, tableHover])
+
+  const handleEditorMouseLeave = useCallback(() => {
+    if (tableLeaveTimerRef.current) clearTimeout(tableLeaveTimerRef.current)
+    tableLeaveTimerRef.current = setTimeout(() => {
+      setTableHover(null)
+      tableLeaveTimerRef.current = null
+    }, 200)
+  }, [])
+
+  const handleTableAdd = useCallback((action) => {
+    if (tableLeaveTimerRef.current) {
+      clearTimeout(tableLeaveTimerRef.current)
+      tableLeaveTimerRef.current = null
+    }
+    const hov = tableHover
+    if (!hov || !hov.table || !hov.table.isConnected) {
+      setTableHover(null)
+      return
+    }
+    const table = hov.table
+    if (action === 'rowAbove') insertTableRow(table, true)
+    else if (action === 'rowBelow') insertTableRow(table, false)
+    else if (action === 'colLeft') insertTableColumn(table, true)
+    else if (action === 'colRight') insertTableColumn(table, false)
+    setTableHover(null)
+    syncFromEditor()
+  }, [tableHover, syncFromEditor])
+
+  useEffect(() => {
+    if (!tableHover || mode !== 'edit') return
+    const updateRect = () => {
+      const table = tableHover.table
+      if (!table || !table.isConnected) {
+        setTableHover(null)
+        return
+      }
+      setTableHover({ ...tableHover, rect: table.getBoundingClientRect() })
+    }
+    const editor = editorRef.current
+    if (!editor) return
+    editor.addEventListener('scroll', updateRect, { passive: true })
+    window.addEventListener('scroll', updateRect, { passive: true })
+    return () => {
+      editor.removeEventListener('scroll', updateRect)
+      window.removeEventListener('scroll', updateRect)
+    }
+  }, [tableHover, mode])
 
   return (
     <div className="editor">
@@ -452,6 +564,23 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
         }} title="Link">Link</button>
         <span className="tb-sep" />
         <button className="tb-btn" onClick={() => cmd(() => {
+          const tableHTML = '<table><thead><tr><th>Header</th><th>Header</th></tr></thead><tbody><tr><td>A</td><td>B</td></tr></tbody></table><p><br></p>'
+          document.execCommand('insertHTML', false, tableHTML)
+          const tbl = editorRef.current && editorRef.current.querySelector('table')
+          if (tbl) {
+            const firstCell = tbl.querySelector('td, th')
+            if (firstCell) {
+              const sel = window.getSelection()
+              const range = document.createRange()
+              range.selectNodeContents(firstCell)
+              range.collapse(true)
+              sel.removeAllRanges()
+              sel.addRange(range)
+            }
+          }
+        })} title="Insert table">▦</button>
+        <span className="tb-sep" />
+        <button className="tb-btn" onClick={() => cmd(() => {
           const sel = window.getSelection()
           if (sel.toString()) {
             document.execCommand('insertHTML', false, `<code>${sel.toString()}</code>`)
@@ -460,16 +589,68 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
         <button className="tb-btn" onClick={() => cmd(() => {
           document.execCommand('insertHTML', false, '<pre><code>code</code></pre>')
         })} title="Code block">{"{ }"}</button>
+        <span className="tb-sep" />
+        <label className="md-toggle" title="Toggle between formatted editor and raw Markdown">
+          <span className="md-toggle-label">MD</span>
+          <input
+            type="checkbox"
+            className="md-toggle-input"
+            checked={mode === 'markdown'}
+            onChange={toggleMode}
+          />
+          <span className="md-toggle-track">
+            <span className="md-toggle-thumb" />
+          </span>
+        </label>
       </div>
       <div className="editor-body">
-        <div
-          ref={editorRef}
-          className="editor-wysiwyg"
-          contentEditable
-          suppressContentEditableWarning
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
-        />
+        {mode === 'edit' ? (
+          <div
+            ref={editorRef}
+            className="editor-wysiwyg"
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+            onMouseMove={handleEditorMouseMove}
+            onMouseLeave={handleEditorMouseLeave}
+          />
+        ) : (
+          <textarea
+            className="md-textarea"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            spellCheck={false}
+          />
+        )}
+        {tableHover && tableHover.rect && (
+          <div className="table-add-handles">
+            {(tableHover.zone === 'top' || tableHover.zone === 'bottom') && (
+              <button
+                className="table-add-handle"
+                style={{
+                  left: tableHover.rect.left + (tableHover.rect.width / 2),
+                  top: tableHover.zone === 'top' ? tableHover.rect.top + 6 : tableHover.rect.bottom - 6,
+                  transform: 'translate(-50%, -50%)'
+                }}
+                onClick={() => handleTableAdd(tableHover.zone === 'top' ? 'rowAbove' : 'rowBelow')}
+                title={tableHover.zone === 'top' ? 'Add row above' : 'Add row below'}
+              >+</button>
+            )}
+            {(tableHover.zone === 'left' || tableHover.zone === 'right') && (
+              <button
+                className="table-add-handle"
+                style={{
+                  left: tableHover.zone === 'left' ? tableHover.rect.left + 6 : tableHover.rect.right - 6,
+                  top: tableHover.rect.top + (tableHover.rect.height / 2),
+                  transform: 'translate(-50%, -50%)'
+                }}
+                onClick={() => handleTableAdd(tableHover.zone === 'left' ? 'colLeft' : 'colRight')}
+                title={tableHover.zone === 'left' ? 'Add column left' : 'Add column right'}
+              >+</button>
+            )}
+          </div>
+        )}
       </div>
       {showLinkModal && (
         <div className="modal-overlay" onClick={() => setShowLinkModal(false)}>

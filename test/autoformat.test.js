@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   isCompletedBlockPattern,
   isCompletedInlinePattern,
-  resolveCaretOffset
+  resolveCaretOffset,
+  isTableHeader,
+  isTableSeparator,
+  buildTableMarkdown
 } from '../src/utils/autoformat'
 
 describe('isCompletedBlockPattern', () => {
@@ -45,6 +48,39 @@ describe('isCompletedBlockPattern', () => {
     expect(isCompletedBlockPattern('---')).toBe('hr')
     expect(isCompletedBlockPattern('___')).toBe('hr')
     expect(isCompletedBlockPattern('- - -')).toBe('hr')
+  })
+
+  it('detects a table separator row', () => {
+    expect(isCompletedBlockPattern('|---|---|')).toBe('table')
+    expect(isCompletedBlockPattern('|:---|:---:|')).toBe('table')
+  })
+
+  it('does not detect a header row as a block conversion', () => {
+    expect(isCompletedBlockPattern('| A | B |')).toBe(null)
+  })
+})
+
+describe('table helpers', () => {
+  it('identifies table header rows', () => {
+    expect(isTableHeader('| A | B |')).toBe(true)
+    expect(isTableHeader('| A | B |')).toBe(true)
+  })
+
+  it('rejects non-table lines as headers', () => {
+    expect(isTableHeader('plain text')).toBe(false)
+    expect(isTableHeader('|---|---|')).toBe(false)
+    expect(isTableHeader('---')).toBe(false)
+  })
+
+  it('identifies table separator rows', () => {
+    expect(isTableSeparator('|---|---|')).toBe(true)
+    expect(isTableSeparator('|:---:|---:|')).toBe(true)
+    expect(isTableSeparator('|---|')).toBe(false)
+  })
+
+  it('builds the GFM source for a table with an empty body row', () => {
+    const src = buildTableMarkdown('| A | B |', '|---|---|')
+    expect(src).toBe('| A | B |\n|---|---|\n|  |  |')
   })
 })
 

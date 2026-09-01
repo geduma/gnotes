@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { renderMarkdown } from '../src/utils/markdown'
+import { htmlToMarkdown } from '../src/utils/html-to-markdown'
 
 describe('headings', () => {
   it('renders H1 to H6', () => {
@@ -214,6 +215,30 @@ describe('GFM tables', () => {
     const html = renderMarkdown('| A | B |\n| :--- | ---: |\n| 1 | 2 |')
     expect(html).toContain('text-align:left')
     expect(html).toContain('text-align:right')
+  })
+})
+
+describe('markdown table round-trip', () => {
+  it('converts an HTML table back to GFM', () => {
+    const html = '<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>'
+    const md = htmlToMarkdown(html)
+    expect(md).toContain('| A | B |')
+    expect(md).toContain('| --- | --- |')
+    expect(md).toContain('| 1 | 2 |')
+  })
+
+  it('preserves links inside table cells', () => {
+    const html = '<table><thead><tr><th>Name</th></tr></thead><tbody><tr><td><a href="https://example.com">site</a></td></tr></tbody></table>'
+    const md = htmlToMarkdown(html)
+    expect(md).toContain('[site](https://example.com)')
+    expect(md).not.toContain('(url)')
+  })
+
+  it('normalizes rows with unequal column counts', () => {
+    const html = '<table><thead><tr><th>A</th><th>B</th><th>C</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table>'
+    const md = htmlToMarkdown(html)
+    const header = md.split('\n')[0]
+    expect(header.split('|').length - 2).toBe(3)
   })
 })
 

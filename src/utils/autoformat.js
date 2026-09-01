@@ -4,7 +4,9 @@ const BLOCK_PATTERNS = {
   ul: /^[-*+] .+$/,
   ol: /^\d+[.)] .+$/,
   hr: /^(\*{3,}|-{3,}|_{3,})$/,
-  hrSpaced: /^(\*\s*){2,}\*$|^(-\s*){2,}-$|^(_\s*){2,}_$/
+  hrSpaced: /^(\*\s*){2,}\*$|^(-\s*){2,}-$|^(_\s*){2,}_$/,
+  tableHeader: /^\|.*\|\s*$/,
+  tableSeparator: /^\|[\s:|-]+\|\s*$/
 }
 
 export function isCompletedBlockPattern(text) {
@@ -14,7 +16,27 @@ export function isCompletedBlockPattern(text) {
   if (BLOCK_PATTERNS.hr.test(t) || BLOCK_PATTERNS.hrSpaced.test(t)) return 'hr'
   if (BLOCK_PATTERNS.ul.test(t)) return 'ul'
   if (BLOCK_PATTERNS.ol.test(t)) return 'ol'
+  if (isTableSeparator(t)) return 'table'
   return null
+}
+
+export function isTableHeader(text) {
+  const t = text.trim()
+  return BLOCK_PATTERNS.tableHeader.test(t) && !BLOCK_PATTERNS.hr.test(t) && !isTableSeparator(t)
+}
+
+export function isTableSeparator(text) {
+  const t = text.trim()
+  if (!BLOCK_PATTERNS.tableSeparator.test(t)) return false
+  const h = t.match(/-+/g)
+  return !!h && h.length >= 2
+}
+
+export function buildTableMarkdown(headerText, separatorText) {
+  const cols = headerText.trim().split('|').length - 2
+  if (cols < 1) return headerText.trim()
+  const emptyRow = '| ' + Array(cols).fill('').join(' | ') + ' |'
+  return [headerText.trim(), separatorText.trim(), emptyRow].join('\n')
 }
 
 export function isCompletedInlinePattern(text, caretOffset) {
