@@ -238,6 +238,26 @@ function nearestTable(node) {
   return null
 }
 
+function detectTableZone(e, rect) {
+  const edge = 24
+  let zone = null
+  if (e.clientX > rect.left && e.clientX < rect.right) {
+    if (rect.bottom - e.clientY <= edge) zone = 'bottom'
+  }
+  if (e.clientY > rect.top && e.clientY < rect.bottom) {
+    if (e.clientX - rect.left <= edge) zone = 'left'
+    else if (rect.right - e.clientX <= edge) zone = 'right'
+  }
+  return zone
+}
+
+function pointerNearTable(e, table, margin) {
+  if (!table || !table.isConnected) return false
+  const rect = table.getBoundingClientRect()
+  return e.clientX >= rect.left - margin && e.clientX <= rect.right + margin &&
+         e.clientY >= rect.top - margin && e.clientY <= rect.bottom + margin
+}
+
 function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const [title, setTitle] = useState(note.title)
   const [body, setBody] = useState(note.body)
@@ -420,6 +440,14 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     }
   }, [mode, syncFromEditor, body])
 
+  const scheduleTableHoverHide = useCallback(() => {
+    if (tableLeaveTimerRef.current) clearTimeout(tableLeaveTimerRef.current)
+    tableLeaveTimerRef.current = setTimeout(() => {
+      setTableHover(null)
+      tableLeaveTimerRef.current = null
+    }, 300)
+  }, [])
+
   const handleEditorMouseMove = useCallback((e) => {
     if (tableLeaveTimerRef.current) {
       clearTimeout(tableLeaveTimerRef.current)
@@ -431,34 +459,40 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     }
     const table = nearestTable(e.target)
     if (!table) {
-      if (tableHover) setTableHover(null)
+      if (tableHover && pointerNearTable(e, tableHover.table, 32)) {
+        setTableHover({ ...tableHover, rect: tableHover.table.getBoundingClientRect() })
+      } else {
+        scheduleTableHoverHide()
+      }
       return
     }
     const rect = table.getBoundingClientRect()
-    const edge = 28
-    let zone = null
-    if (e.clientX > rect.left && e.clientX < rect.right) {
-      if (e.clientY - rect.top <= edge) zone = 'top'
-      else if (rect.bottom - e.clientY <= edge) zone = 'bottom'
-    }
-    if (e.clientY > rect.top && e.clientY < rect.bottom) {
-      if (e.clientX - rect.left <= edge) zone = 'left'
-      else if (rect.right - e.clientX <= edge) zone = 'right'
-    }
+    const zone = detectTableZone(e, rect)
     if (zone) {
       setTableHover({ table, zone, rect })
-    } else {
-      setTableHover(null)
+      return
     }
-  }, [mode, tableHover])
+    if (tableHover && tableHover.table === table) {
+      setTableHover({ ...tableHover, rect })
+    } else {
+      scheduleTableHoverHide()
+    }
+  }, [mode, tableHover, scheduleTableHoverHide])
 
   const handleEditorMouseLeave = useCallback(() => {
-    if (tableLeaveTimerRef.current) clearTimeout(tableLeaveTimerRef.current)
-    tableLeaveTimerRef.current = setTimeout(() => {
-      setTableHover(null)
+    scheduleTableHoverHide()
+  }, [scheduleTableHoverHide])
+
+  const handleOverlayMouseEnter = useCallback(() => {
+    if (tableLeaveTimerRef.current) {
+      clearTimeout(tableLeaveTimerRef.current)
       tableLeaveTimerRef.current = null
-    }, 200)
+    }
   }, [])
+
+  const handleOverlayMouseLeave = useCallback(() => {
+    scheduleTableHoverHide()
+  }, [scheduleTableHoverHide])
 
   const handleTableAdd = useCallback((action) => {
     if (tableLeaveTimerRef.current) {
@@ -471,8 +505,7 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
       return
     }
     const table = hov.table
-    if (action === 'rowAbove') insertTableRow(table, true)
-    else if (action === 'rowBelow') insertTableRow(table, false)
+    if (action === 'rowBelow') insertTableRow(table, false)
     else if (action === 'colLeft') insertTableColumn(table, true)
     else if (action === 'colRight') insertTableColumn(table, false)
     setTableHover(null)
@@ -624,17 +657,21 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
           />
         )}
         {tableHover && tableHover.rect && (
-          <div className="table-add-handles">
-            {(tableHover.zone === 'top' || tableHover.zone === 'bottom') && (
+          <div
+            className="table-add-handles"
+            onMouseEnter={handleOverlayMouseEnter}
+            onMouseLeave={handleOverlayMouseLeave}
+          >
+            {tableHover.zone === 'bottom' && (
               <button
                 className="table-add-handle"
                 style={{
                   left: tableHover.rect.left + (tableHover.rect.width / 2),
-                  top: tableHover.zone === 'top' ? tableHover.rect.top + 6 : tableHover.rect.bottom - 6,
+                  top: tableHover.rect.bottom - 6,
                   transform: 'translate(-50%, -50%)'
                 }}
-                onClick={() => handleTableAdd(tableHover.zone === 'top' ? 'rowAbove' : 'rowBelow')}
-                title={tableHover.zone === 'top' ? 'Add row above' : 'Add row below'}
+                onClick={() => handleTableAdd('rowBelow')}
+                title="Add row below"
               >+</button>
             )}
             {(tableHover.zone === 'left' || tableHover.zone === 'right') && (
