@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import TurndownService from 'turndown'
 import ConfirmModal from './ConfirmModal'
+import { renderMarkdown } from '../utils/markdown'
 
 const turndown = new TurndownService({
   headingStyle: 'atx',
@@ -10,81 +11,55 @@ const turndown = new TurndownService({
   bulletListMarker: '-'
 })
 
-function mdToHtml(md) {
-  if (!md) return ''
-  let html = md.replace(/\r\n/g, '\n').replace(/\r/g, '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/~~(.+?)~~/g, '<s>$1</s>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    .replace(/^-{3,}$/gm, '<hr>')
-  html = html.split(/\n\n+/).map(block => {
-    if (/^<h[1-3]|<pre|<blockquote|<hr|<li|<ul|<ol/i.test(block)) return block
-    if (/^\d+\. /.test(block) || /^[-*] /.test(block)) {
-      const lines = block.split('\n')
-      let idx = 0
-      function processLevel(baseIndent) {
-        let result = ''
-        let currentTag = null
-        while (idx < lines.length) {
-          const line = lines[idx]
-          const indent = (line.match(/^(\s*)/) || ['', ''])[1].length
-          if (indent < baseIndent) break
-          const ulMatch = line.match(/^(\s*)([*-]) (.+)$/)
-          const olMatch = line.match(/^(\s*)(\d+)\. (.+)$/)
-          if (!ulMatch && !olMatch) { idx++; break }
-          const tag = ulMatch ? 'ul' : 'ol'
-          const content = ((ulMatch || olMatch)[3]).trim()
-          if (currentTag && currentTag !== tag) {
-            result += `</${currentTag}>\n`
-            currentTag = null
-          }
-          if (!currentTag) {
-            currentTag = tag
-            result += `<${tag}>\n`
-          }
-          idx++
-          const nextIndent = idx < lines.length
-            ? (lines[idx].match(/^(\s*)/) || ['', ''])[1].length
-            : -1
-          if (nextIndent > indent) {
-            result += `<li>${inlineMd(content)}\n`
-            result += processLevel(nextIndent)
-            result += `</li>\n`
-          } else {
-            result += `<li>${inlineMd(content)}</li>\n`
-          }
+turndown.addRule('table', {
+  filter: node => node.nodeName === 'TABLE',
+  replacement: function (content) {
+    const rows = []
+    nodeLoop: for (let i = 0; i < node.children.length; i++) {
+      const tr = node.children[i]
+      if (tr.nodeName === 'THEAD' || tr.nodeName === 'TBODY') {
+        for (let j = 0; j < tr.children.length; j++) {
+          rows.push(cellsToRow(tr.children[j]))
         }
-        if (currentTag) result += `</${currentTag}>\n`
-        return result
+      } else if (tr.nodeName === 'TR') {
+        rows.push(cellsToRow(tr))
       }
-      return processLevel(0)
     }
-    return `<p>${block.replace(/\n/g, '<br>')}</p>`
-  }).join('\n')
-  return html
+    if (!rows.length) return ''
+    let output = '| ' + rows[0].map((c) => c.text).join(' | ') + ' |\n'
+    output += '| ' + rows[0].map((c) => c.align).join(' | ') + ' |\n'
+    for (let i = 1; i < rows.length; i++) {
+      output += '| ' + rows[i].map((c) => c.text).join(' | ') + ' |\n'
+    }
+    return output.trim() + '\n\n'
+  }
+})
+
+function cellsToRow(tr) {
+  const cells = []
+  for (let i = 0; i < tr.children.length; i++) {
+    const cell = tr.children[i]
+    const align = cell.align || ''
+    const alignDelimiter = align === 'left' ? ':---' : align === 'right' ? '---:' : align === 'center' ? ':---:' : '---'
+    cells.push({
+      text: inlineToMarkdown(cell.innerHTML),
+      align: alignDelimiter
+    })
+  }
+  return cells
 }
 
-function inlineMd(text) {
-  return text
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/~~(.+?)~~/g, '<s>$1</s>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+function inlineToMarkdown(html) {
+  if (!html) return ''
+  return html
+    .replace(/<strong>/g, '**')
+    .replace(/<\/strong>/g, '**')
+    .replace(/<em>/g, '*')
+    .replace(/<\/em>/g, '*')
+    .replace(/<code>/g, '`')
+    .replace(/<\/code>/g, '`')
+    .replace(/<a[^>]*>(.*?)<\/a>/g, '[$1](url)')
+    .replace(/<[^>]+>/g, '')
 }
 
 function fixListDom(root) {
@@ -115,6 +90,7 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const [tags, setTags] = useState(note.tags || [])
   const [tagInput, setTagInput] = useState('')
   const [saved, setSaved] = useState(true)
+  const [mode, setMode] = useState('edit')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showCloseModal, setShowCloseModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
@@ -135,8 +111,9 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
       lastSavedRef.current = { title: note.title, body: note.body, tags: note.tags || [] }
       prevSlugRef.current = note.slug
       setBody(note.body)
+      setMode('edit')
       if (editorRef.current) {
-        editorRef.current.innerHTML = mdToHtml(note.body) || '<br>'
+        editorRef.current.innerHTML = renderMarkdown(note.body) || '<br>'
       }
     }
   }, [note])
@@ -190,6 +167,19 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
       })
     }
   }, [cmd])
+
+  const toggleMode = useCallback(() => {
+    setMode((prev) => {
+      if (prev === 'edit') {
+        syncFromEditor()
+        return 'markdown'
+      }
+      if (editorRef.current) {
+        editorRef.current.innerHTML = renderMarkdown(body) || '<br>'
+      }
+      return 'edit'
+    })
+  }, [body, syncFromEditor])
 
   return (
     <div className="editor">
@@ -264,16 +254,31 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
         <button className="tb-btn" onClick={() => cmd(() => {
           document.execCommand('insertHTML', false, '<pre><code>code</code></pre>')
         })} title="Code block">{"{ }"}</button>
+        <span className="tb-sep" />
+        <button
+          className={`tb-btn mode-toggle ${mode === 'markdown' ? 'active' : ''}`}
+          onClick={toggleMode}
+          title="Toggle Markdown source"
+        >MD</button>
       </div>
       <div className="editor-body">
-        <div
-          ref={editorRef}
-          className="editor-wysiwyg"
-          contentEditable
-          suppressContentEditableWarning
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
-        />
+        {mode === 'edit' ? (
+          <div
+            ref={editorRef}
+            className="editor-wysiwyg"
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+          />
+        ) : (
+          <textarea
+            className="md-textarea"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            spellCheck={false}
+          />
+        )}
       </div>
       {showLinkModal && (
         <div className="modal-overlay" onClick={() => setShowLinkModal(false)}>

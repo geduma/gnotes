@@ -701,6 +701,23 @@ body {
   pointer-events: none;
 }
 
+.md-textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 100px;
+  padding: 0 4px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .editor-wysiwyg h1,
 .editor-wysiwyg h2,
 .editor-wysiwyg h3,
@@ -717,6 +734,8 @@ body {
 .editor-wysiwyg h2 { font-size: 22px; }
 .editor-wysiwyg h3 { font-size: 18px; }
 .editor-wysiwyg h4 { font-size: 16px; }
+.editor-wysiwyg h5 { font-size: 14px; }
+.editor-wysiwyg h6 { font-size: 13px; }
 
 .editor-wysiwyg p {
   margin-bottom: 6px;
@@ -778,6 +797,11 @@ body {
 
 .editor-wysiwyg li {
   margin-bottom: 0;
+}
+
+.editor-wysiwyg input[type="checkbox"] {
+  margin: 0 6px 2px 0;
+  vertical-align: middle;
 }
 
 .editor-wysiwyg blockquote {
@@ -852,6 +876,13 @@ body {
   background: var(--border);
   margin: 0 4px;
   flex-shrink: 0;
+}
+
+.mode-toggle.active {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .editor-empty {

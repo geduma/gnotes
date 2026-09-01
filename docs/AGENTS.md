@@ -4,7 +4,7 @@
 
 - React 18 + Vite 5 + Vitest
 - CSS puro (sin Tailwind, sin CSS-in-JS)
-- Markdown: turndown (HTML→Markdown para editor WYSIWYG)
+- Markdown: markdown-it + markdown-it-task-lists (Markdown→HTML) y turndown (HTML→Markdown para editor WYSIWYG)
 - API externa: `https://api.geduma.com`
 - Auth: JWT single-use vía `POST /auth` + OAuth social vía `geduma-auth`
 - Almacenamiento local: IndexedDB nativo (sin librerías)
@@ -28,11 +28,11 @@ gnotes/
 ├── src/
 │   ├── components/   # Sidebar.jsx, Editor.jsx, LoginModal.jsx, ConfirmModal.jsx, Spinner.jsx
 │   ├── hooks/        # useAuth.js — login, session, localStorage
-│   ├── utils/        # slug.js, api.js, hash.js, local-db.js
+│   ├── utils/        # slug.js, api.js, hash.js, local-db.js, markdown.js
 │   ├── App.jsx       # Estado global, orquestación, lógica dual
 │   ├── main.jsx      # Entry point
 │   └── index.css     # Todos los estilos
-├── test/             # api.test.js, slug.test.js, hash.test.js
+├── test/             # api.test.js, slug.test.js, hash.test.js, markdown.test.js
 ├── vite.config.js
 ├── package.json
 ├── index.html
@@ -42,15 +42,17 @@ gnotes/
 ## Patrones
 
 - **Sidebar + Editor**: componentes puramente presentacionales, reciben props. `App.jsx` maneja todo el estado y la lógica de negocio.
-- **Autosave**: `Editor.jsx` maneja debounce de 2s con `useEffect` + `setTimeout`. Compara con `prevSlugRef` y `lastSavedRef` para detectar cambios reales.
+- **Editor (sin autosave)**: no hay debounce ni autosave automático. El guardado es manual (botón "Save" o confirmación de cierre). `Editor.jsx` compara con `lastSavedRef` para detectar cambios reales y activar el indicador `saved`.
+- **Editor — Markdown**: `body` (Markdown) es la única fuente de verdad. Dos modos editables con toggle binario en la toolbar (botón "MD"): `edit` (WYSIWYG contentEditable) y `markdown` (textarea crudo). Ambos mutan el mismo `body` → `saved`, "Save" y la confirmación de cierre funcionan igual en los dos modos. `src/utils/markdown.js` exporta `renderMarkdown()` (markdown-it + markdown-it-task-lists, `html:false`).
+- **Editor — round-trip**: en modo `edit`, `syncFromEditor()` convierte el HTML del contentEditable a Markdown con Turndown al guardar. Se añadió `addRule` de tablas a Turndown para no perderlas.
 - **Key en Editor**: `<Editor key={activeNote.slug}>` fuerza remount al cambiar de nota.
-- **useCallback en props de Editor**: `updateExistingNote`, `saveNewNote` y `deleteExistingNote` están envueltas en `useCallback` para evitar reseteos del debounce del Editor en cada render de App.
+- **useCallback en props de Editor**: `updateExistingNote`, `saveNewNote` y `deleteExistingNote` están envueltas en `useCallback` para evitar reseteos de los efectos del Editor en cada render de App.
 - **Errores visibles**: toda operación API que falle debe llamar a `setError()` para que el usuario vea el error. Nunca silenciar con `console.error` únicamente.
 - **API calls**: fetch nativo desde `utils/api.js`, JWT single-use (refresh antes de cada request). Owner se pasa en cada endpoint.
 - **Slugs**: `generateUniqueSlug(title, existingSlugs)` desde `utils/slug.js`.
 - **Búsqueda**: client-side (filtra por title + body + tags).
 - **Dos fuentes de datos**: sin usuario logueado usa IndexedDB local; logueado usa API con ownerHash.
-- **Notas nuevas**: se crean localmente (sin API). Se persisten al primer edit (autosave).
+- **Notas nuevas**: se crean localmente (sin API). Se persisten al primer guardado manual ("Save").
 - **LoginModal con spinner**: al cargar providers (inline) y al hacer clic en un provider (spinner en botón + deshabilitar todos los demás).
 
 ## API - Auth (geduma-auth)

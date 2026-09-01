@@ -47,7 +47,8 @@ Se necesita una herramienta que:
 |----|----------|-----------|
 | US-01 | Como usuario, quiero crear una nota sin necesidad de cuenta. | P0 |
 | US-02 | Como usuario, quiero editar una nota con un editor WYSIWYG. | P0 |
-| US-03 | Como usuario, quiero autosave para no perder cambios. | P0 |
+| US-03 | Como usuario, quiero guardar mis cambios de forma manual sin pérdidas. | P0 |
+| US-03b | Como usuario, quiero editar el Markdown crudo de mis notas. | P0 |
 | US-04 | Como usuario, quiero eliminar una nota que ya no necesito. | P0 |
 | US-05 | Como usuario, quiero buscar entre mis notas. | P0 |
 | US-06 | Como usuario, quiero etiquetar notas con tags. | P0 |
@@ -89,8 +90,9 @@ Se necesita una herramienta que:
 |---------|-------------|--------|
 | Crear nota | Local (IndexedDB) o privada (API según login). | ✅ |
 | Editar nota | Editor WYSIWYG con barra de formato flotante. | ✅ |
-| Autosave | Debounce de 2s en título, body y tags. | ✅ |
-| Guardado manual | Botón "Save". | ✅ |
+| Editor Markdown | Toggle binario "MD" para editar el Markdown crudo. | ✅ |
+| Soporte Markdown completo | markdown-it + GFM (tablas, checkboxes, citas anidadas, H4–H6, autolinks, tachado, escape). | ✅ |
+| Guardado manual | Botón "Save" + confirmación de cierre (sin autosave). | ✅ |
 | Indicador saved/unsaved | Estado visual de cambios. | ✅ |
 | Eliminar nota | DELETE con confirmación modal. | ✅ |
 | Búsqueda | Filtra por título + body + tags. | ✅ |
@@ -130,7 +132,8 @@ Se necesita una herramienta que:
 |------|-----------|---------------|
 | Frontend | React 18 + Vite 5 | Rápido, HMR, ecosistema maduro. |
 | Estilos | CSS puro | Sin dependencias, control total. |
-| Markdown | turndown | HTML→Markdown para editor WYSIWYG. |
+| Markdown | markdown-it + markdown-it-task-lists | Markdown→HTML (CommonMark + GFM: tablas, checkboxes, autolinks). |
+| Markdown→Markdown | turndown | HTML→Markdown para editor WYSIWYG (round-trip). |
 | API | REST (`api.geduma.com`) | MongoDB con owner y JWT. |
 | Auth OAuth | geduma-auth | OAuth social centralizado. |
 | Auth JWT | POST /auth | Token single-use por operación. |
@@ -261,10 +264,8 @@ Se necesita una herramienta que:
 ### MVP (v0.1.0)
 
 - [x] CRUD completo de notas vía UI.
-- [x] Autosave con debounce.
 - [x] Búsqueda por título, cuerpo y tags.
 - [x] Tags persistidos.
-- [x] Preview Markdown.
 - [x] Dark mode.
 - [x] Tests unitarios (slugs, API client).
 - [x] API externa con MongoDB.
@@ -283,11 +284,27 @@ Se necesita una herramienta que:
 
 ### v0.3.0
 
-- [x] Editor WYSIWYG con barra de formato flotante (Bold, Italic, H1-H3, listas, blockquote, link, code).
+- [x] Editor WYSIWYG con barra de formato flotante (Bold, Italic, listas, blockquote, link, code).
 - [x] Turndown para conversión HTML→Markdown al guardar.
 - [x] Modal de link (URL + text) en toolbar.
 - [x] Eliminada dependencia react-markdown (~79 paquetes menos).
-- [x] Bundle reducido de ~274KB a ~170KB.
+
+### v0.3.1 (Soporte Markdown completo)
+
+- [x] Parser Markdown→HTML reemplazado por markdown-it + markdown-it-task-lists (CommonMark + GFM).
+- [x] Encabezados H1–H6 y sintaxis subrayada (`=`/`-`).
+- [x] Citas anidadas y de varios párrafos.
+- [x] Listas ordenadas/desordenadas/anidadas/mezcladas.
+- [x] Código de bloque (vallas y 4 espacios), código inline.
+- [x] Tablas GFM con alineación.
+- [x] Casillas de verificación (task lists).
+- [x] Tachado, negrita/cursiva combinadas, imágenes (inline y referencia).
+- [x] Enlaces de referencia, automáticos y autolinks (URLs/emails desnudos).
+- [x] Escape de caracteres (`\*`, `\#`, etc.).
+- [x] XSS-safe vía `html:false` (escapa HTML crudo).
+- [x] Toggle binario "MD" para editar el Markdown crudo (mantiene `body` como fuente única).
+- [x] Turndown con `addRule` de tablas para round-trip al guardar.
+- [x] Tests `test/markdown.test.js` cubriendo toda la guía.
 
 ### Próximo release (v0.4.0)
 
