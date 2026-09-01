@@ -1,171 +1,174 @@
 # PRD — GNotes
 
 > **Product Requirements Document**
-> Versión: 3.0 | Fecha: 2026-06-22 | Autor: Felipe
+> Version: 3.0 | Date: 2026-06-22 | Author: Felipe
 
 ---
 
-## 1. Resumen Ejecutivo
+## 1. Executive Summary
 
-GNotes es una aplicación web de notas minimalista con dos modos de persistencia: **local** (IndexedDB en el navegador, sin usuario) y **privada** (MongoDB vía API REST, con usuario autenticado). Ofrece una experiencia de edición rápida y silenciosa que prioriza la escritura sobre la gestión visual.
-
----
-
-## 2. Problema
-
-Las herramientas existentes de notas (Notion, Obsidian, Evernote, etc.) presentan problemas para un perfil técnico que valora:
-
-- **Portabilidad**: formatos propietarios que dificultan migrar o acceder desde otro editor.
-- **Complejidad**: sobrecarga de features, dashboards, widgets, AI assistants no solicitados.
-- **Dependencia de cloud**: datos en servidores de terceros sin control real.
-- **Fricción**: tiempos de carga, animaciones, actualizaciones automáticas que interrumpen el flujo.
-
-Se necesita una herramienta que:
-
-- Sea **instantánea** al abrir y al escribir.
-- Tenga una **API limpia** que permita integración con herramientas externas y agentes IA.
-- Funcione **offline-first** sin necesidad de cuenta.
-- Permita **sincronizar a cloud** opcionalmente con login OAuth.
+GNotes is a minimalist web notes application with two persistence modes: **local** (IndexedDB in the browser, no user) and **private** (MongoDB via REST API, with authenticated user). It offers a fast and quiet editing experience that prioritizes writing over visual management.
 
 ---
 
-## 3. Usuarios Objetivo
+## 2. Problem
 
-| Tipo | Descripción |
+Existing note tools (Notion, Obsidian, Evernote, etc.) present issues for a technical profile that values:
+
+- **Portability**: proprietary formats that make it hard to migrate or access from another editor.
+- **Complexity**: feature overload, dashboards, widgets, unsolicited AI assistants.
+- **Cloud dependency**: data on third-party servers without real control.
+- **Friction**: load times, animations, automatic updates that interrupt the flow.
+
+A tool is needed that:
+
+- Is **instant** to open and to write.
+- Has a **clean API** that allows integration with external tools and AI agents.
+- Works **offline-first** without requiring an account.
+- Allows optional **cloud sync** with OAuth login.
+
+---
+
+## 3. Target Users
+
+| Type | Description |
 |------|-------------|
-| **Persona principal** | Desarrollador/DevOps que quiere notas técnicas, con API REST, sin vendor lock-in. |
-| **Persona secundaria** | Usuario técnico que self-hostea servicios y quiere persistencia cloud opcional. |
-| **No target** | Usuarios no técnicos que esperan UX tipo Notion con WYSIWYG o app mobile. |
+| **Primary persona** | Developer/DevOps who wants technical notes, with REST API, no vendor lock-in. |
+| **Secondary persona** | Technical user who self-hosts services and wants optional cloud persistence. |
+| **Non-target** | Non-technical users who expect Notion-like UX with WYSIWYG or a mobile app. |
 
 ---
 
 ## 4. User Stories
 
-### MVP (Actual)
+### MVP (Current)
 
-| ID | Historia | Prioridad |
+| ID | Story | Priority |
 |----|----------|-----------|
-| US-01 | Como usuario, quiero crear una nota sin necesidad de cuenta. | P0 |
-| US-02 | Como usuario, quiero editar una nota con un editor WYSIWYG. | P0 |
-| US-03 | Como usuario, quiero autosave para no perder cambios. | P0 |
-| US-04 | Como usuario, quiero eliminar una nota que ya no necesito. | P0 |
-| US-05 | Como usuario, quiero buscar entre mis notas. | P0 |
-| US-06 | Como usuario, quiero etiquetar notas con tags. | P0 |
-| US-07 | Como usuario, quiero las notas accesibles vía API REST. | P0 |
-| US-08 | Como usuario, quiero login OAuth para persistencia cloud. | P0 |
-| US-09 | Como usuario logueado, quiero que mis notas tengan owner y sean privadas. | P0 |
-| US-10 | Como usuario, quiero diferenciar visualmente notas locales de privadas. | P0 |
+| US-01 | As a user, I want to create a note without needing an account. | P0 |
+| US-02 | As a user, I want to edit a note with a WYSIWYG editor. | P0 |
+| US-03 | As a user, I want to save my changes manually without loss. | P0 |
+| US-03b | As a user, I want to edit the raw Markdown of my notes. | P0 |
+| US-04 | As a user, I want to delete a note I no longer need. | P0 |
+| US-05 | As a user, I want to search among my notes. | P0 |
+| US-06 | As a user, I want to tag notes with tags. | P0 |
+| US-07 | As a user, I want notes accessible via REST API. | P0 |
+| US-08 | As a user, I want OAuth login for cloud persistence. | P0 |
+| US-09 | As a logged-in user, I want my notes to have an owner and be private. | P0 |
+| US-10 | As a user, I want to visually distinguish local notes from private ones. | P0 |
 
-### Fase 2 — Organización
+### Phase 2 — Organization
 
-| ID | Historia | Prioridad |
+| ID | Story | Priority |
 |----|----------|-----------|
-| US-11 | Como usuario, quiero agrupar notas en carpetas. | P1 |
-| US-12 | Como usuario, quiero mover notas entre carpetas. | P1 |
+| US-11 | As a user, I want to group notes into folders. | P1 |
+| US-12 | As a user, I want to move notes between folders. | P1 |
 
-### Fase 3 — UX
+### Phase 3 — UX
 
-| ID | Historia | Prioridad |
+| ID | Story | Priority |
 |----|----------|-----------|
-| US-13 | Como usuario, quiero atajo de teclado para nueva nota. | P1 |
-| US-14 | Como usuario, quiero un editor más cómodo (CodeMirror). | P2 |
-| US-15 | Como usuario, quiero drag & drop de imágenes. | P3 |
+| US-13 | As a user, I want a keyboard shortcut for a new note. | P1 |
+| US-14 | As a user, I want a more comfortable editor (CodeMirror). | P2 |
+| US-15 | As a user, I want image drag & drop. | P3 |
 
-### Fase 4 — AI
+### Phase 4 — AI
 
-| ID | Historia | Prioridad |
+| ID | Story | Priority |
 |----|----------|-----------|
-| US-16 | Como usuario, quiero resumen IA de mi nota. | P2 |
-| US-17 | Como usuario, quiero auto-tagging sugerido por IA. | P2 |
-| US-18 | Como usuario, quiero grafo de conocimiento entre notas. | P3 |
+| US-16 | As a user, I want an AI summary of my note. | P2 |
+| US-17 | As a user, I want AI-suggested auto-tagging. | P2 |
+| US-18 | As a user, I want a knowledge graph between notes. | P3 |
 
 ---
 
 ## 5. Features
 
-### 5.1 MVP (Implementado)
+### 5.1 MVP (Implemented)
 
-| Feature | Descripción | Estado |
+| Feature | Description | Status |
 |---------|-------------|--------|
-| Crear nota | Local (IndexedDB) o privada (API según login). | ✅ |
-| Editar nota | Editor WYSIWYG con barra de formato flotante. | ✅ |
-| Autosave | Debounce de 2s en título, body y tags. | ✅ |
-| Guardado manual | Botón "Save". | ✅ |
-| Indicador saved/unsaved | Estado visual de cambios. | ✅ |
-| Eliminar nota | DELETE con confirmación modal. | ✅ |
-| Búsqueda | Filtra por título + body + tags. | ✅ |
-| Tags | Input tipo chips. | ✅ |
-| Renombrar | Cambiar título actualiza el slug. | ✅ |
-| Dark mode | Tema oscuro por defecto. | ✅ |
-| Responsive | Breakpoint 768px. | ✅ |
-| API REST | CRUD completo con owner. | ✅ |
-| Auth JWT | Token single-use vía POST /auth. | ✅ |
-| Login OAuth | Login vía geduma-auth (Google, GitHub, MS). | ✅ |
-| Owner hash | SHA-256 del email, identifica notas del usuario. | ✅ |
-| Almacenamiento local | IndexedDB nativo sin librerías. | ✅ |
-| Dual source | App.jsx con lógica local/privada según auth. | ✅ |
-| Spinner global | Loading overlay en llamadas API. | ✅ |
-| Spinner providers | Inline en LoginModal (carga y login). | ✅ |
+| Create note | Local (IndexedDB) or private (API based on login). | ✅ |
+| Edit note | WYSIWYG editor with floating format bar. | ✅ |
+| Markdown editor | Binary "MD" toggle to edit raw Markdown. | ✅ |
+| Full Markdown support | markdown-it + GFM (tables, checkboxes, nested quotes, H4–H6, autolinks, strikethrough, escape). | ✅ |
+| Manual save | "Save" button + close confirmation (no autosave). | ✅ |
+| Saved/unsaved indicator | Visual state of changes. | ✅ |
+| Delete note | DELETE with modal confirmation. | ✅ |
+| Search | Filters by title + body + tags. | ✅ |
+| Tags | Chip-style input. | ✅ |
+| Rename | Changing the title updates the slug. | ✅ |
+| Dark mode | Dark theme by default. | ✅ |
+| Responsive | 768px breakpoint. | ✅ |
+| REST API | Full CRUD with owner. | ✅ |
+| JWT auth | Single-use token via POST /auth. | ✅ |
+| OAuth login | Login via geduma-auth (Google, GitHub, MS). | ✅ |
+| Owner hash | SHA-256 of the email, identifies the user's notes. | ✅ |
+| Local storage | Native IndexedDB without libraries. | ✅ |
+| Dual source | App.jsx with local/private logic based on auth. | ✅ |
+| Global spinner | Loading overlay on API calls. | ✅ |
+| Provider spinners | Inline in LoginModal (loading and login). | ✅ |
 
-### 5.2 Futuras (Roadmap)
+### 5.2 Future (Roadmap)
 
-| Feature | Descripción | Prioridad |
+| Feature | Description | Priority |
 |---------|-------------|-----------|
-| Carpetas | Navegación por directorios. | P1 |
-| Atajo crear nota | `CMD + N`. | P1 |
-| Editor CodeMirror | Highlighting, line numbers. | P2 |
-| Drag & drop imágenes | Subida de imágenes. | P2 |
-| Tema claro/oscuro | Toggle. | P2 |
-| Resúmenes IA | Vía LLM local. | P2 |
-| Auto-tagging IA | Tags sugeridos. | P2 |
-| Graph view | Relaciones entre notas. | P3 |
+| Folders | Directory navigation. | P1 |
+| New-note shortcut | `CMD + N`. | P1 |
+| CodeMirror editor | Highlighting, line numbers. | P2 |
+| Image drag & drop | Image upload. | P2 |
+| Light/dark theme | Toggle. | P2 |
+| AI summaries | Via local LLM. | P2 |
+| AI auto-tagging | Suggested tags. | P2 |
+| Graph view | Relationships between notes. | P3 |
 
 ---
 
-## 6. Requerimientos Técnicos
+## 6. Technical Requirements
 
 ### 6.1 Stack
 
-| Capa | Tecnología | Justificación |
+| Layer | Technology | Justification |
 |------|-----------|---------------|
-| Frontend | React 18 + Vite 5 | Rápido, HMR, ecosistema maduro. |
-| Estilos | CSS puro | Sin dependencias, control total. |
-| Markdown | turndown | HTML→Markdown para editor WYSIWYG. |
-| API | REST (`api.geduma.com`) | MongoDB con owner y JWT. |
-| Auth OAuth | geduma-auth | OAuth social centralizado. |
-| Auth JWT | POST /auth | Token single-use por operación. |
-| Local storage | IndexedDB nativo | Sin librerías externas. |
-| Hash | Web Crypto API (SHA-256) | Owner hash del email. |
-| Tests | Vitest + jsdom | Mismo bundler que Vite. |
+| Frontend | React 18 + Vite 5 | Fast, HMR, mature ecosystem. |
+| Styles | Pure CSS | No dependencies, total control. |
+| Markdown | markdown-it + markdown-it-task-lists | Markdown→HTML (CommonMark + GFM: tables, checkboxes, autolinks). |
+| Markdown→Markdown | turndown | HTML→Markdown for the WYSIWYG editor (round-trip). |
+| API | REST (`api.geduma.com`) | MongoDB with owner and JWT. |
+| OAuth auth | geduma-auth | Centralized social OAuth. |
+| JWT auth | POST /auth | Single-use token per operation. |
+| Local storage | Native IndexedDB | No external libraries. |
+| Hash | Web Crypto API (SHA-256) | Owner hash of the email. |
+| Tests | Vitest + jsdom | Same bundler as Vite. |
 
 ### 6.2 API — Auth
 
-| Método | Ruta | Descripción |
+| Method | Route | Description |
 |--------|------|-------------|
-| GET | `/auth/providers/{appId}` | Lista providers OAuth disponibles |
-| POST | `/auth/login/{appId}/{providerId}` | Inicia login, retorna redirect URL |
-| GET | `/auth/session/{sessionToken}` | Obtiene datos del usuario (single-use) |
+| GET | `/auth/providers/{appId}` | List available OAuth providers |
+| POST | `/auth/login/{appId}/{providerId}` | Starts login, returns redirect URL |
+| GET | `/auth/session/{sessionToken}` | Gets user data (single-use) |
 
-### 6.3 API — Notas
+### 6.3 API — Notes
 
-| Método | Ruta | Auth | Body/Params |
+| Method | Route | Auth | Body/Params |
 |--------|------|------|-------------|
-| GET | `/gnotes?owner=&q=` | Bearer | Filtros opcionales |
+| GET | `/gnotes?owner=&q=` | Bearer | Optional filters |
 | POST | `/gnotes` | Bearer | `{ slug, title, body, tags, updated, owner }` |
 | PUT | `/gnotes/:slug` | Bearer | `{ title?, body?, tags?, updated?, newSlug?, owner }` |
-| DELETE | `/gnotes/:slug` | Bearer | query `?owner=` o body `{ owner }` |
+| DELETE | `/gnotes/:slug` | Bearer | `?owner=` query or `{ owner }` body |
 
-- `owner` = SHA-256 del email del usuario.
-- GET sin `?owner=` retorna todas las notas.
-- PUT/DELETE validan ownership (403 si no coincide).
+- `owner` = SHA-256 of the user's email.
+- GET without `?owner=` returns all notes.
+- PUT/DELETE validate ownership (403 if it doesn't match).
 
-### 6.4 Formato de Nota
+### 6.4 Note Format
 
 ```json
 {
-  "slug": "mi-nota",
-  "title": "Mi nota",
-  "body": "Contenido en **markdown**",
+  "slug": "my-note",
+  "title": "My note",
+  "body": "Content in **markdown**",
   "tags": ["tag1", "tag2"],
   "updated": "2026-06-22",
   "owner": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -174,35 +177,35 @@ Se necesita una herramienta que:
 
 ### 6.5 Performance
 
-| Métrica | Objetivo |
+| Metric | Goal |
 |---------|----------|
 | Time to Interactive | < 1.5s |
-| Bundle JS | < 300 KB (gzip ~85 KB) |
-| Sin framework CSS | 0 KB adicionales |
+| JS bundle | < 300 KB (gzip ~85 KB) |
+| No CSS framework | 0 additional KB |
 
-### 6.6 Seguridad
+### 6.6 Security
 
-- JWT single-use en cada operación API.
-- Login OAuth vía geduma-auth (session_token single-use).
-- Owner hash SHA-256 del email.
-- API Key en frontend (`VITE_API_AUTH_KEY`).
-- HTTPS en producción.
-
----
-
-## 7. Principios de Diseño
-
-1. **Silencioso**: sin notificaciones, modales ni animaciones intrusivas.
-2. **Rápido**: respuesta instantánea en escritura y navegación.
-3. **API-first**: notas consumibles y persistibles vía API REST.
-4. **AI-friendly**: API limpia para integración con agentes IA.
-5. **Sin vendor lock-in**: migrar es conectar otra API compatible.
-6. **Offline-first**: funciona sin cuenta, persistencia local opcional.
-7. **Minimalista**: cada feature debe justificar su existencia.
+- Single-use JWT on every API operation.
+- OAuth login via geduma-auth (single-use session_token).
+- SHA-256 owner hash of the email.
+- API Key in the frontend (`VITE_API_AUTH_KEY`).
+- HTTPS in production.
 
 ---
 
-## 8. Arquitectura
+## 7. Design Principles
+
+1. **Quiet**: no notifications, modals or intrusive animations.
+2. **Fast**: instant response when writing and navigating.
+3. **API-first**: notes consumable and persistable via REST API.
+4. **AI-friendly**: clean API for integration with AI agents.
+5. **No vendor lock-in**: migrating means connecting another compatible API.
+6. **Offline-first**: works without an account, optional local persistence.
+7. **Minimalist**: every feature must justify its existence.
+
+---
+
+## 8. Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -210,21 +213,21 @@ Se necesita una herramienta que:
 │                                                      │
 │  ┌──────────┐  ┌──────────────────────────────────┐ │
 │  │ Sidebar   │  │  Editor / Empty                  │ │
-│  │ (notas)   │  │                                  │ │
+│  │ (notes)   │  │                                  │ │
 │  │ Login/User│  │  Footer: by @geduma ☕           │ │
 │  └──────────┘  └──────────────────────────────────┘ │
 │                                                      │
 │  ┌──────────────────────────────────────────────┐   │
-│  │            Fuente de datos                     │   │
+│  │            Data source                        │   │
 │  │                                                │   │
-│  │  ┌── sin usuario ──────────────────────────┐  │   │
+│  │  ┌── no user ────────────────────────────┐  │   │
 │  │  │  IndexedDB (gnotes-local)               │  │   │
-│  │  │  CRUD local, sin API                    │  │   │
+│  │  │  Local CRUD, no API                    │  │   │
 │  │  └──────────────────────────────────────────┘  │   │
 │  │                                                │   │
-│  │  ┌── con usuario ───────────────────────────┐  │   │
+│  │  ┌── with user ───────────────────────────┐  │   │
 │  │  │  GET/POST/PUT/DELETE /gnotes             │  │   │
-│  │  │  con owner=hash (SHA-256 del email)      │  │   │
+│  │  │  with owner=hash (email SHA-256)      │  │   │
 │  │  └──────────────────────────────────────────┘  │   │
 │  └──────────────────────────────────────────────┘   │
 │                                                      │
@@ -234,74 +237,88 @@ Se necesita una herramienta que:
 │  │  1. GET /auth/providers/{appId} → providers   │   │
 │  │  2. POST /auth/login/{appId}/{providerId}     │   │
 │  │  3. Redirect → OAuth provider                 │   │
-│  │  4. Callback → session_token en URL           │   │
+│  │  4. Callback → session_token in URL           │   │
 │  │  5. GET /auth/session/{token} → user data     │   │
 │  │  6. sha256(email) → ownerHash                 │   │
-│  │  7. Guardar en localStorage                   │   │
+│  │  7. Save in localStorage                      │   │
 │  └──────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────┘
                         │
           ┌─────────────┴─────────────┐
           ▼                           ▼
 ┌─────────────────┐     ┌──────────────────────┐
-│ geduma-auth     │     │ API gnotes           │
+│ geduma-auth     │     │ gnotes API           │
 │ (OAuth proxy)   │     │ (MongoDB + JWT auth) │
 │ api.geduma.com  │     │ api.geduma.com       │
 └─────────────────┘     └──────────────────────┘
 ```
 
-- **Dev**: `npm run dev` → Vite en puerto 5173.
-- **Build**: `npm run build` → `dist/` con SPA estática.
-- **Prod**: Se sirve `dist/` con cualquier servidor estático.
+- **Dev**: `npm run dev` → Vite on port 5173.
+- **Build**: `npm run build` → `dist/` with static SPA.
+- **Prod**: `dist/` is served with any static server.
 
 ---
 
-## 9. Criterios de Release
+## 9. Release Criteria
 
 ### MVP (v0.1.0)
 
-- [x] CRUD completo de notas vía UI.
-- [x] Autosave con debounce.
-- [x] Búsqueda por título, cuerpo y tags.
-- [x] Tags persistidos.
-- [x] Preview Markdown.
+- [x] Full note CRUD via UI.
+- [x] Search by title, body and tags.
+- [x] Persisted tags.
 - [x] Dark mode.
-- [x] Tests unitarios (slugs, API client).
-- [x] API externa con MongoDB.
-- [x] Auth JWT single-use.
+- [x] Unit tests (slugs, API client).
+- [x] External API with MongoDB.
+- [x] Single-use JWT auth.
 
-### v0.2.0 (Actual)
+### v0.2.0 (Current)
 
-- [x] Login OAuth vía geduma-auth.
-- [x] Owner hash SHA-256 en cada nota.
-- [x] Almacenamiento local IndexedDB.
-- [x] Lógica dual local/privada en App.jsx.
-- [x] Modal de providers OAuth dinámicos.
-- [x] Spinner global en llamadas API.
-- [x] Footer "by @geduma ☕".
-- [x] Tests de hash.
+- [x] OAuth login via geduma-auth.
+- [x] SHA-256 owner hash on each note.
+- [x] IndexedDB local storage.
+- [x] Dual local/private logic in App.jsx.
+- [x] Dynamic OAuth provider modal.
+- [x] Global spinner on API calls.
+- [x] "by @geduma ☕" footer.
+- [x] Hash tests.
 
 ### v0.3.0
 
-- [x] Editor WYSIWYG con barra de formato flotante (Bold, Italic, H1-H3, listas, blockquote, link, code).
-- [x] Turndown para conversión HTML→Markdown al guardar.
-- [x] Modal de link (URL + text) en toolbar.
-- [x] Eliminada dependencia react-markdown (~79 paquetes menos).
-- [x] Bundle reducido de ~274KB a ~170KB.
+- [x] WYSIWYG editor with floating format bar (Bold, Italic, lists, blockquote, link, code).
+- [x] Turndown for HTML→Markdown conversion on save.
+- [x] Link modal (URL + text) in the toolbar.
+- [x] Removed react-markdown dependency (~79 fewer packages).
 
-### Próximo release (v0.4.0)
+### v0.3.1 (Full Markdown support)
 
-- [ ] Estructura de carpetas en sidebar.
-- [ ] Atajo `CMD + N` para nueva nota.
-- [ ] Tests de componentes (Sidebar, Editor).
-- [ ] Toggle tema claro/oscuro.
+- [x] Markdown→HTML parser replaced with markdown-it + markdown-it-task-lists (CommonMark + GFM).
+- [x] H1–H6 headings and underlined syntax (`=`/`-`).
+- [x] Nested and multi-paragraph quotes.
+- [x] Ordered/unordered/nested/mixed lists.
+- [x] Block code (fences and 4 spaces), inline code.
+- [x] GFM tables with alignment.
+- [x] Checkboxes (task lists).
+- [x] Strikethrough, combined bold/italic, images (inline and reference).
+- [x] Reference links, automatic links and autolinks (bare URLs/emails).
+- [x] Character escaping (`\*`, `\#`, etc.).
+- [x] XSS-safe via `html:false` (escapes raw HTML).
+- [x] Binary "MD" toggle to edit raw Markdown (keeps `body` as single source).
+- [x] Turndown with table `addRule` for round-trip on save.
+- [x] `test/markdown.test.js` tests covering the full guide.
+
+### Next release (v0.4.0)
+
+- [ ] Folder structure in the sidebar.
+- [ ] `CMD + N` shortcut for new note.
+- [ ] Component tests (Sidebar, Editor).
+- [ ] Light/dark theme toggle.
 
 ---
 
-## 10. Fuera de Alcance (v1.0)
+## 10. Out of Scope (v1.0)
 
-- Colaboración multiusuario en tiempo real.
-- Aplicación mobile nativa.
-- Sincronización entre local y cloud.
-- Plugins / extensiones.
+- Real-time multi-user collaboration.
+- Native mobile application.
+- Sync between local and cloud.
+- Plugins / extensions.
 - Landing page / marketing site.

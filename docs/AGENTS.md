@@ -1,116 +1,118 @@
-# GNotes — Instrucciones para Agentes
+# GNotes — Agent Instructions
 
 ## Stack
 
 - React 18 + Vite 5 + Vitest
-- CSS puro (sin Tailwind, sin CSS-in-JS)
-- Markdown: turndown (HTML→Markdown para editor WYSIWYG)
-- API externa: `https://api.geduma.com`
-- Auth: JWT single-use vía `POST /auth` + OAuth social vía `geduma-auth`
-- Almacenamiento local: IndexedDB nativo (sin librerías)
-- Hash: Web Crypto API (SubtleCrypto) para SHA-256
-- Idioma: Español (UI, commits, docs)
+- Pure CSS (no Tailwind, no CSS-in-JS)
+- Markdown: markdown-it + markdown-it-task-lists (Markdown→HTML) and turndown (HTML→Markdown for WYSIWYG editor)
+- External API: `https://api.geduma.com`
+- Auth: single-use JWT via `POST /auth` + social OAuth via `geduma-auth`
+- Local storage: native IndexedDB (no libraries)
+- Hash: Web Crypto API (SubtleCrypto) for SHA-256
+- Language: English (UI, commits, docs)
 
-## Convenciones de Código
+## Code Conventions
 
-- Extensiones `.jsx` para componentes React, `.js` para el resto.
-- Nombres de componentes en PascalCase, funciones/variables en camelCase.
-- Sin TypeScript.
-- Sin comentarios en código.
-- CSS en `index.css` con custom properties para el tema oscuro.
-- Estados con `useState`, efectos con `useEffect`, refs con `useRef`.
-- Props desestructuradas en la firma del componente.
+- `.jsx` extensions for React components, `.js` for everything else.
+- Component names in PascalCase, functions/variables in camelCase.
+- No TypeScript.
+- No code comments.
+- CSS in `index.css` with custom properties for the dark theme.
+- State with `useState`, effects with `useEffect`, refs with `useRef`.
+- Props destructured in the component signature.
 
-## Estructura
+## Structure
 
 ```
 gnotes/
 ├── src/
 │   ├── components/   # Sidebar.jsx, Editor.jsx, LoginModal.jsx, ConfirmModal.jsx, Spinner.jsx
 │   ├── hooks/        # useAuth.js — login, session, localStorage
-│   ├── utils/        # slug.js, api.js, hash.js, local-db.js
-│   ├── App.jsx       # Estado global, orquestación, lógica dual
+│   ├── utils/        # slug.js, api.js, hash.js, local-db.js, markdown.js
+│   ├── App.jsx       # Global state, orchestration, dual logic
 │   ├── main.jsx      # Entry point
-│   └── index.css     # Todos los estilos
-├── test/             # api.test.js, slug.test.js, hash.test.js
+│   └── index.css     # All styles
+├── test/             # api.test.js, slug.test.js, hash.test.js, markdown.test.js
 ├── vite.config.js
 ├── package.json
 ├── index.html
 └── public/
 ```
 
-## Patrones
+## Patterns
 
-- **Sidebar + Editor**: componentes puramente presentacionales, reciben props. `App.jsx` maneja todo el estado y la lógica de negocio.
-- **Autosave**: `Editor.jsx` maneja debounce de 2s con `useEffect` + `setTimeout`. Compara con `prevSlugRef` y `lastSavedRef` para detectar cambios reales.
-- **Key en Editor**: `<Editor key={activeNote.slug}>` fuerza remount al cambiar de nota.
-- **useCallback en props de Editor**: `updateExistingNote`, `saveNewNote` y `deleteExistingNote` están envueltas en `useCallback` para evitar reseteos del debounce del Editor en cada render de App.
-- **Errores visibles**: toda operación API que falle debe llamar a `setError()` para que el usuario vea el error. Nunca silenciar con `console.error` únicamente.
-- **API calls**: fetch nativo desde `utils/api.js`, JWT single-use (refresh antes de cada request). Owner se pasa en cada endpoint.
-- **Slugs**: `generateUniqueSlug(title, existingSlugs)` desde `utils/slug.js`.
-- **Búsqueda**: client-side (filtra por title + body + tags).
-- **Dos fuentes de datos**: sin usuario logueado usa IndexedDB local; logueado usa API con ownerHash.
-- **Notas nuevas**: se crean localmente (sin API). Se persisten al primer edit (autosave).
-- **LoginModal con spinner**: al cargar providers (inline) y al hacer clic en un provider (spinner en botón + deshabilitar todos los demás).
+- **Sidebar + Editor**: purely presentational components, receive props. `App.jsx` handles all state and business logic.
+- **Editor (no autosave)**: no debounce or automatic autosave. Saving is manual ("Save" button or close confirmation). `Editor.jsx` compares against `lastSavedRef` to detect real changes and activate the `saved` indicator.
+- **Editor — Markdown**: `body` (Markdown) is the single source of truth. Two editable modes with a binary toggle in the toolbar ("MD" button): `edit` (WYSIWYG contentEditable) and `markdown` (raw textarea). Both mutate the same `body` → `saved`, "Save" and the close confirmation work the same in both modes. `src/utils/markdown.js` exports `renderMarkdown()` (markdown-it + markdown-it-task-lists, `html:false`).
+- **Editor — round-trip**: in `edit` mode, `syncFromEditor()` converts the contentEditable HTML to Markdown with Turndown on save. A table `addRule` was added to Turndown to not lose tables.
+- **Editor key**: `<Editor key={activeNote.slug}>` forces a remount when switching notes.
+- **useCallback on Editor props**: `updateExistingNote`, `saveNewNote` and `deleteExistingNote` are wrapped in `useCallback` to prevent Editor effect resets on every App render.
+- **Visible errors**: every failing API operation must call `setError()` so the user sees the error. Never silence with `console.error` only.
+- **API calls**: native fetch from `utils/api.js`, single-use JWT (refresh before each request). Owner is sent on each endpoint.
+- **Slugs**: `generateUniqueSlug(title, existingSlugs)` from `utils/slug.js`.
+- **Search**: client-side (filters by title + body + tags).
+- **Two data sources**: without a logged-in user uses local IndexedDB; logged in uses the API with ownerHash.
+- **New notes**: created locally (no API). Persisted on the first manual save ("Save").
+- **LoginModal with spinner**: when loading providers (inline) and when clicking a provider (spinner in the button + disable all the others).
 
 ## API - Auth (geduma-auth)
 
 ```
-GET  /auth/providers/{appId}        → Lista de providers OAuth disponibles
-POST /auth/login/{appId}/{providerId} → URL de redirección al provider
-GET  /auth/session/{sessionToken}   → Datos del usuario (single-use)
+GET  /auth/providers/{appId}        → List of available OAuth providers
+POST /auth/login/{appId}/{providerId} → Redirect URL to the provider
+GET  /auth/session/{sessionToken}   → User data (single-use)
 ```
 
 Base URL: `https://api.geduma.com`
-APP_ID: desde `VITE_APP_ID` en `.env`
+APP_ID: from `VITE_APP_ID` in `.env`
 
-⚠️ El `session_token` se recibe como **fragmento (hash)** de la URL, no como query param. Se lee desde el cliente con `window.location.hash` + `URLSearchParams`, sin viajar al servidor. Ej: `https://miapp.com/callback#session_token=uuid-xxx`
+⚠️ The `session_token` is received as a **URL fragment (hash)**, not as a query param. It is read client-side with `window.location.hash` + `URLSearchParams`, without reaching the server. E.g.: `https://miapp.com/callback#session_token=uuid-xxx`
 
-## API - Notas
+## API - Notes
 
-| Método | Ruta | Auth | Body/Params |
+| Method | Route | Auth | Body/Params |
 |--------|------|------|-------------|
-| GET | `/gnotes?owner=&q=` | Bearer | query params opcionales |
+| GET | `/gnotes?owner=&q=` | Bearer | optional query params |
 | POST | `/gnotes` | Bearer | `{ slug, title, body, tags, updated, owner }` |
 | PUT | `/gnotes/:slug` | Bearer | `{ title?, body?, tags?, updated?, newSlug?, owner }` |
-| DELETE | `/gnotes/:slug?owner=` | Bearer | query param `owner` |
+| DELETE | `/gnotes/:slug?owner=` | Bearer | `owner` query param |
 
-- `owner` = SHA-256 del email del usuario.
-- GET sin `?owner=` retorna todas las notas.
-- PUT/DELETE validan ownership (403 si no coincide).
+- `owner` = SHA-256 of the user's email.
+- GET without `?owner=` returns all notes.
+- PUT/DELETE validate ownership (403 if it doesn't match).
 
-## Almacenamiento Local (IndexedDB)
+## Local Storage (IndexedDB)
 
-Base: `gnotes-local` / Store: `notes` (keyPath: `slug`)
-Funciones en `src/utils/local-db.js`:
-- `getAllNotes()` — retorna todas ordenadas por updated descendente
-- `createNote(data)` — add al store
-- `updateNote(slug, fields)` — merge con existente + put
-- `deleteNote(slug)` — delete del store
+Database: `gnotes-local` / Store: `notes` (keyPath: `slug`)
+Functions in `src/utils/local-db.js`:
+- `getAllNotes()` — returns all sorted by updated descending
+- `createNote(data)` — add to the store
+- `updateNote(slug, fields)` — merge with existing + put
+- `deleteNote(slug)` — delete from the store
 
-## Variables de Entorno
+## Environment Variables
 
 ```
-VITE_API_AUTH_KEY=...          # API key para POST /auth
-VITE_APP_ID=app_mqpon84ym0hbvi # App ID para geduma-auth
+VITE_API_AUTH_KEY=...          # API key for POST /auth
+VITE_APP_ID=app_mqpon84ym0hbvi # App ID for geduma-auth
 ```
 
 ## Tests
 
 ```bash
 npm run test         # watch mode
-npm run test:run     # una vez
+npm run test:run     # run once
 ```
 
 - Test files: `test/*.test.js`
 - Framework: Vitest + jsdom.
-- Sin Testing Library — lógica pura sin DOM en tests unitarios.
+- No Testing Library — pure logic without DOM in unit tests.
 
-## Reglas para Agentes
+## Agent Rules
 
-1. NO agregues comentarios al código.
-2. NO agregues TypeScript ni cambies extensiones a `.tsx`.
-3. NO añadas dependencias nuevas sin verificar que valen la pena.
-4. Los mensajes de commit deben ir en español, cortos y descriptivos.
-5. Prefiere CSS puro + custom properties sobre librerías de UI.
-6. Prefiere fetch nativo sobre librerías HTTP.
+1. Do NOT add comments to code.
+2. Do NOT add TypeScript or change extensions to `.tsx`.
+3. Do NOT add new dependencies without verifying they are worth it.
+4. Commit messages must be in English, short and descriptive.
+5. Prefer pure CSS + custom properties over UI libraries.
+6. Prefer native fetch over HTTP libraries.
