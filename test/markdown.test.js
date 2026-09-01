@@ -1,237 +1,237 @@
 import { describe, it, expect } from 'vitest'
 import { renderMarkdown } from '../src/utils/markdown'
 
-describe('encabezados', () => {
-  it('renderiza H1 a H6', () => {
-    expect(renderMarkdown('# Uno')).toContain('<h1>Uno</h1>')
-    expect(renderMarkdown('## Dos')).toContain('<h2>Dos</h2>')
-    expect(renderMarkdown('### Tres')).toContain('<h3>Tres</h3>')
-    expect(renderMarkdown('#### Cuatro')).toContain('<h4>Cuatro</h4>')
-    expect(renderMarkdown('##### Cinco')).toContain('<h5>Cinco</h5>')
-    expect(renderMarkdown('###### Seis')).toContain('<h6>Seis</h6>')
+describe('headings', () => {
+  it('renders H1 to H6', () => {
+    expect(renderMarkdown('# One')).toContain('<h1>One</h1>')
+    expect(renderMarkdown('## Two')).toContain('<h2>Two</h2>')
+    expect(renderMarkdown('### Three')).toContain('<h3>Three</h3>')
+    expect(renderMarkdown('#### Four')).toContain('<h4>Four</h4>')
+    expect(renderMarkdown('##### Five')).toContain('<h5>Five</h5>')
+    expect(renderMarkdown('###### Six')).toContain('<h6>Six</h6>')
   })
 
-  it('soporta sintaxis subrayada con = y -', () => {
-    expect(renderMarkdown('Titulo\n===')).toContain('<h1>Titulo</h1>')
-    expect(renderMarkdown('Subtitulo\n---')).toContain('<h2>Subtitulo</h2>')
-  })
-})
-
-describe('párrafos y saltos de línea', () => {
-  it('convierte saltos de línea simples en <br>', () => {
-    expect(renderMarkdown('linea 1\nlinea 2')).toContain('linea 1<br>')
-  })
-
-  it('separa párrafos con líneas en blanco', () => {
-    const html = renderMarkdown('párrafo uno\n\npárrafo dos')
-    expect(html).toContain('<p>párrafo uno</p>')
-    expect(html).toContain('<p>párrafo dos</p>')
+  it('supports underlined syntax with = and -', () => {
+    expect(renderMarkdown('Title\n===')).toContain('<h1>Title</h1>')
+    expect(renderMarkdown('Subtitle\n---')).toContain('<h2>Subtitle</h2>')
   })
 })
 
-describe('citas', () => {
-  it('renderiza cita simple', () => {
-    expect(renderMarkdown('> texto citado')).toContain('<blockquote>')
-    expect(renderMarkdown('> texto citado')).toContain('texto citado')
+describe('paragraphs and line breaks', () => {
+  it('converts single line breaks into <br>', () => {
+    expect(renderMarkdown('line 1\nline 2')).toContain('line 1<br>')
   })
 
-  it('renderiza citas de varios párrafos', () => {
-    const html = renderMarkdown('> párrafo 1\n>\n> párrafo 2')
-    expect(html).toContain('párrafo 1')
-    expect(html).toContain('párrafo 2')
+  it('separates paragraphs with blank lines', () => {
+    const html = renderMarkdown('paragraph one\n\nparagraph two')
+    expect(html).toContain('<p>paragraph one</p>')
+    expect(html).toContain('<p>paragraph two</p>')
+  })
+})
+
+describe('blockquotes', () => {
+  it('renders a simple blockquote', () => {
+    expect(renderMarkdown('> quoted text')).toContain('<blockquote>')
+    expect(renderMarkdown('> quoted text')).toContain('quoted text')
   })
 
-  it('renderiza citas anidadas', () => {
-    const html = renderMarkdown('> principal\n>\n> > anidada')
-    expect(html).toContain('anidada')
+  it('renders multi-paragraph blockquotes', () => {
+    const html = renderMarkdown('> paragraph 1\n>\n> paragraph 2')
+    expect(html).toContain('paragraph 1')
+    expect(html).toContain('paragraph 2')
+  })
+
+  it('renders nested blockquotes', () => {
+    const html = renderMarkdown('> main\n>\n> > nested')
+    expect(html).toContain('nested')
     expect(html.match(/<blockquote>/g).length).toBeGreaterThanOrEqual(1)
   })
 })
 
-describe('listas', () => {
-  it('renderiza listas desordenadas', () => {
-    const html = renderMarkdown('- uno\n- dos\n- tres')
+describe('lists', () => {
+  it('renders unordered lists', () => {
+    const html = renderMarkdown('- one\n- two\n- three')
     expect(html).toContain('<ul>')
-    expect(html).toContain('<li>uno</li>')
-    expect(html).toContain('<li>tres</li>')
+    expect(html).toContain('<li>one</li>')
+    expect(html).toContain('<li>three</li>')
   })
 
-  it('soporta *, - y + como marcadores', () => {
+  it('supports *, - and + as markers', () => {
     expect(renderMarkdown('* a\n- b\n+ c')).toContain('<ul>')
   })
 
-  it('renderiza listas ordenadas', () => {
-    const html = renderMarkdown('1. primero\n2. segundo')
+  it('renders ordered lists', () => {
+    const html = renderMarkdown('1. first\n2. second')
     expect(html).toContain('<ol>')
-    expect(html).toContain('<li>primero</li>')
+    expect(html).toContain('<li>first</li>')
   })
 
-  it('no requiere numeración secuencial', () => {
+  it('does not require sequential numbering', () => {
     const html = renderMarkdown('1. a\n3. b\n9. c')
     expect(html).toContain('<li>a</li>')
     expect(html).toContain('<li>c</li>')
   })
 
-  it('renderiza listas anidadas', () => {
-    const html = renderMarkdown('- padre\n    - hijo\n        - nieto')
-    expect(html).toContain('<li>padre')
-    expect(html).toContain('<li>hijo')
-    expect(html).toContain('<li>nieto')
+  it('renders nested lists', () => {
+    const html = renderMarkdown('- parent\n    - child\n        - grandchild')
+    expect(html).toContain('<li>parent')
+    expect(html).toContain('<li>child')
+    expect(html).toContain('<li>grandchild')
   })
 
-  it('combina listas ordenadas y desordenadas', () => {
-    const html = renderMarkdown('1. uno\n    - a\n    - b')
+  it('combines ordered and unordered lists', () => {
+    const html = renderMarkdown('1. one\n    - a\n    - b')
     expect(html).toContain('<ol>')
     expect(html).toContain('<ul>')
   })
 })
 
-describe('códigos de bloque', () => {
-  it('renderiza bloques con tres acentos graves', () => {
-    const html = renderMarkdown('```\ncódigo aquí\n```')
+describe('block code', () => {
+  it('renders blocks with three backticks', () => {
+    const html = renderMarkdown('```\ncode here\n```')
     expect(html).toContain('<pre>')
     expect(html).toContain('<code>')
-    expect(html).toContain('código aquí')
+    expect(html).toContain('code here')
   })
 
-  it('soporta lenguaje en el bloque', () => {
+  it('supports language in the block', () => {
     const html = renderMarkdown('```js\nconst x = 1\n```')
     expect(html).toContain('language-js')
   })
 
-  it('soporta virgulillas ~~~', () => {
-    const html = renderMarkdown('~~~\ncódigo\n~~~')
+  it('supports tildes ~~~', () => {
+    const html = renderMarkdown('~~~\ncode\n~~~')
     expect(html).toContain('<pre>')
   })
 
-  it('soporta bloque preformateado con 4 espacios', () => {
-    const html = renderMarkdown('    línea de código')
+  it('supports a preformatted block with 4 spaces', () => {
+    const html = renderMarkdown('    code line')
     expect(html).toContain('<pre>')
-    expect(html).toContain('línea de código')
+    expect(html).toContain('code line')
   })
 })
 
-describe('reglas horizontales', () => {
-  it.each(['***', '---', '___', '* * *', '- - -', '_ _ _'])('renderiza %s', (input) => {
+describe('horizontal rules', () => {
+  it.each(['***', '---', '___', '* * *', '- - -', '_ _ _'])('renders %s', (input) => {
     expect(renderMarkdown(input)).toContain('<hr>')
   })
 })
 
-describe('énfasis', () => {
-  it('renderiza cursiva con * y _', () => {
-    expect(renderMarkdown('*cursiva*')).toContain('<em>cursiva</em>')
-    expect(renderMarkdown('_cursiva_')).toContain('<em>cursiva</em>')
+describe('emphasis', () => {
+  it('renders italics with * and _', () => {
+    expect(renderMarkdown('*italic*')).toContain('<em>italic</em>')
+    expect(renderMarkdown('_italic_')).toContain('<em>italic</em>')
   })
 
-  it('renderiza negrita con ** y __', () => {
-    expect(renderMarkdown('**negrita**')).toContain('<strong>negrita</strong>')
-    expect(renderMarkdown('__negrita__')).toContain('<strong>negrita</strong>')
+  it('renders bold with ** and __', () => {
+    expect(renderMarkdown('**bold**')).toContain('<strong>bold</strong>')
+    expect(renderMarkdown('__bold__')).toContain('<strong>bold</strong>')
   })
 
-  it('combina cursiva y negrita con ***', () => {
-    expect(renderMarkdown('***ambos***')).toContain('<em><strong>ambos</strong></em>')
+  it('combines italics and bold with ***', () => {
+    expect(renderMarkdown('***both***')).toContain('<em><strong>both</strong></em>')
   })
 
-  it('no aplica énfasis con guiones dentro de la palabra', () => {
+  it('does not apply emphasis with underscores inside a word', () => {
     const html = renderMarkdown('foo_bar_baz')
     expect(html).not.toContain('<em>')
   })
 
-  it('renderiza tachado con ~~', () => {
-    expect(renderMarkdown('~~tachado~~')).toContain('<s>tachado</s>')
+  it('renders strikethrough with ~~', () => {
+    expect(renderMarkdown('~~strikethrough~~')).toContain('<s>strikethrough</s>')
   })
 })
 
-describe('enlaces', () => {
-  it('renderiza enlaces en línea', () => {
-    expect(renderMarkdown('[texto](https://ejemplo.com)')).toContain('<a href="https://ejemplo.com">texto</a>')
+describe('links', () => {
+  it('renders inline links', () => {
+    expect(renderMarkdown('[text](https://example.com)')).toContain('<a href="https://example.com">text</a>')
   })
 
-  it('renderiza enlaces de referencia', () => {
-    const html = renderMarkdown('[texto][ref]\n\n[ref]: https://ejemplo.com')
-    expect(html).toContain('<a href="https://ejemplo.com">texto</a>')
+  it('renders reference links', () => {
+    const html = renderMarkdown('[text][ref]\n\n[ref]: https://example.com')
+    expect(html).toContain('<a href="https://example.com">text</a>')
   })
 
-  it('renderiza enlaces automáticos', () => {
-    expect(renderMarkdown('<https://ejemplo.com>')).toContain('<a href="https://ejemplo.com">')
-  })
-})
-
-describe('código en línea', () => {
-  it('renderiza código inline', () => {
-    expect(renderMarkdown('`código`')).toContain('<code>código</code>')
+  it('renders automatic links', () => {
+    expect(renderMarkdown('<https://example.com>')).toContain('<a href="https://example.com">')
   })
 })
 
-describe('imágenes', () => {
-  it('renderiza imagen inline con alt', () => {
-    expect(renderMarkdown('![alt](/ruta/img.jpg)')).toContain('<img src="/ruta/img.jpg" alt="alt">')
-  })
-
-  it('soporta título en la imagen', () => {
-    expect(renderMarkdown('![alt](/img.jpg "título")')).toContain('title="título"')
-  })
-
-  it('renderiza imagen por referencia', () => {
-    const html = renderMarkdown('![alt][img]\n\n[img]: /ruta/img.jpg')
-    expect(html).toContain('<img src="/ruta/img.jpg" alt="alt">')
+describe('inline code', () => {
+  it('renders inline code', () => {
+    expect(renderMarkdown('`code`')).toContain('<code>code</code>')
   })
 })
 
-describe('links automáticos (linkify)', () => {
-  it('convierte URLs desnudas en enlaces', () => {
-    expect(renderMarkdown('https://ejemplo.com')).toContain('<a href="https://ejemplo.com">')
+describe('images', () => {
+  it('renders an inline image with alt', () => {
+    expect(renderMarkdown('![alt](/path/img.jpg)')).toContain('<img src="/path/img.jpg" alt="alt">')
   })
 
-  it('convierte emails desnudos en enlaces', () => {
-    expect(renderMarkdown('correo@ejemplo.com')).toContain('<a href="mailto:')
+  it('supports a title in the image', () => {
+    expect(renderMarkdown('![alt](/img.jpg "title")')).toContain('title="title"')
+  })
+
+  it('renders an image by reference', () => {
+    const html = renderMarkdown('![alt][img]\n\n[img]: /path/img.jpg')
+    expect(html).toContain('<img src="/path/img.jpg" alt="alt">')
   })
 })
 
-describe('escape de caracteres', () => {
-  it('renderiza asterisco escapado literalmente', () => {
-    const html = renderMarkdown('\\*no cursiva\\*')
+describe('automatic links (linkify)', () => {
+  it('converts bare URLs into links', () => {
+    expect(renderMarkdown('https://example.com')).toContain('<a href="https://example.com">')
+  })
+
+  it('converts bare emails into links', () => {
+    expect(renderMarkdown('mail@example.com')).toContain('<a href="mailto:')
+  })
+})
+
+describe('character escaping', () => {
+  it('renders an escaped asterisk literally', () => {
+    const html = renderMarkdown('\\*not italic\\*')
     expect(html).not.toContain('<em>')
-    expect(html).toContain('*no cursiva*')
+    expect(html).toContain('*not italic*')
   })
 
-  it('renderiza almohadilla escapada literalmente', () => {
-    const html = renderMarkdown('\\# no encabezado')
+  it('renders an escaped hash literally', () => {
+    const html = renderMarkdown('\\# not a heading')
     expect(html).not.toContain('<h1>')
-    expect(html).toContain('# no encabezado')
+    expect(html).toContain('# not a heading')
   })
 })
 
-describe('tablas GFM', () => {
-  it('renderiza tabla básica', () => {
+describe('GFM tables', () => {
+  it('renders a basic table', () => {
     const html = renderMarkdown('| A | B |\n|---|---|\n| 1 | 2 |')
     expect(html).toContain('<table>')
     expect(html).toContain('<th>A</th>')
     expect(html).toContain('<td>1</td>')
   })
 
-  it('aplica alineación de columnas', () => {
+  it('applies column alignment', () => {
     const html = renderMarkdown('| A | B |\n| :--- | ---: |\n| 1 | 2 |')
     expect(html).toContain('text-align:left')
     expect(html).toContain('text-align:right')
   })
 })
 
-describe('casillas de verificación', () => {
-  it('renderiza tareas sin marcar', () => {
-    const html = renderMarkdown('- [ ] pendiente')
+describe('checkboxes', () => {
+  it('renders unchecked tasks', () => {
+    const html = renderMarkdown('- [ ] pending')
     expect(html).toContain('type="checkbox"')
-    expect(html).toContain('pendiente')
+    expect(html).toContain('pending')
   })
 
-  it('renderiza tareas marcadas', () => {
-    const html = renderMarkdown('- [x] hecho')
+  it('renders checked tasks', () => {
+    const html = renderMarkdown('- [x] done')
     expect(html).toContain('checked')
   })
 })
 
-describe('seguridad', () => {
-  it('escapa HTML crudo (no lo renderiza)', () => {
+describe('security', () => {
+  it('escapes raw HTML (does not render it)', () => {
     const html = renderMarkdown('<script>alert("x")</script>')
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;')

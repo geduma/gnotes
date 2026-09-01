@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import TurndownService from 'turndown'
 import ConfirmModal from './ConfirmModal'
 import { renderMarkdown } from '../utils/markdown'
+import { isCompletedBlockPattern, isCompletedInlinePattern, resolveCaretOffset } from '../utils/autoformat'
 
 const turndown = new TurndownService({
   headingStyle: 'atx',
@@ -9,6 +10,20 @@ const turndown = new TurndownService({
   emDelimiter: '*',
   strongDelimiter: '**',
   bulletListMarker: '-'
+})
+
+turndown.addRule('strikethrough', {
+  filter: ['s', 'del'],
+  replacement: function (content) {
+    return '~~' + content + '~~'
+  }
+})
+
+turndown.addRule('taskListCheckbox', {
+  filter: node => node.nodeName === 'INPUT' && node.getAttribute('type') === 'checkbox',
+  replacement: function (content, node) {
+    return node.checked ? '[x] ' : '[ ] '
+  }
 })
 
 turndown.addRule('table', {
@@ -84,6 +99,200 @@ function fixListDom(root) {
   }
 }
 
+function getActiveListItem() {
+  const sel = window.getSelection()
+  if (!sel || !sel.rangeCount) return null
+  let node = sel.anchorNode
+  if (node && node.nodeType === Node.TEXT_NODE) node = node.parentNode
+  while (node && node.nodeType === Node.ELEMENT_NODE && node.nodeName !== 'LI') {
+    node = node.parentNode
+  }
+  return node && node.nodeName === 'LI' ? node : null
+}
+
+function placeCaretInLi(li) {
+  const sel = window.getSelection()
+  const range = document.createRange()
+  range.selectNodeContents(li)
+  range.collapse(false)
+  sel.removeAllRanges()
+  sel.addRange(range)
+}
+
+function getNodeAndOffset() {
+  const sel = window.getSelection()
+  if (!sel || !sel.rangeCount) return null
+  const range = sel.getRangeAt(0)
+  if (!range.collapsed) return null
+  const node = range.startContainer
+  const offset = range.startOffset
+  const text = node.nodeType === Node.TEXT_NODE ? node : null
+  if (text) {
+    return { container: node, text, offset }
+  }
+  const child = node.childNodes[offset - 1]
+  if (child && child.nodeType === Node.TEXT_NODE) {
+    return { container: child, text: child, offset: child.data.length }
+  }
+  const next = node.childNodes[offset]
+  if (next && next.nodeType === Node.TEXT_NODE) {
+    return { container: next, text: next, offset: 0 }
+  }
+  return null
+}
+
+function isBlockElement(el) {
+  if (!el || el.nodeType !== Node.ELEMENT_NODE) return false
+  const tag = el.tagName
+  if (tag === 'P' || tag === 'LI' || tag === 'BLOCKQUOTE' || tag === 'PRE' || /^H[1-6]$/.test(tag)) return true
+  return el.classList && el.classList.contains('editor-wysiwyg')
+}
+
+function getBlockGoal() {
+  const g = getNodeAndOffset()
+  if (!g) return null
+  let block = g.text
+  while (block && block.parentNode && block.parentNode.nodeType === Node.ELEMENT_NODE) {
+    block = block.parentNode
+    if (isBlockElement(block)) break
+  }
+  let blockText = ''
+  let caretInBlock = 0
+  let found = false
+  const walk = (node) => {
+    if (found) return
+    if (node.nodeType === Node.TEXT_NODE) {
+      const txt = node.data
+      if (node === g.text) {
+        blockText += txt.slice(0, g.offset)
+        caretInBlock = blockText.length
+        blockText += txt.slice(g.offset)
+        found = true
+        return
+      }
+      blockText += txt
+    } else {
+      for (let i = 0; i < node.childNodes.length && !found; i++) {
+        walk(node.childNodes[i])
+      }
+    }
+  }
+  walk(block)
+  if (!found) blockText = block.textContent || ''
+  return { block, blockText, caretInBlock }
+}
+
+function restoreCaretAtOffset(root, offset) {
+  let targetText = null
+  let targetOffset = 0
+  let consumed = 0
+  const find = (node) => {
+    if (targetText) return
+    if (node.nodeType === Node.TEXT_NODE) {
+      const next = consumed + node.data.length
+      if (offset >= consumed && offset <= next) {
+        targetText = node
+        targetOffset = offset - consumed
+      } else {
+        consumed = next
+      }
+    } else {
+      for (let i = 0; i < node.childNodes.length && !targetText; i++) {
+        find(node.childNodes[i])
+      }
+    }
+  }
+  find(root)
+  if (!targetText) {
+    const last = lastTextNode(root)
+    if (!last) return false
+    targetText = last
+    targetOffset = last.data.length
+  }
+  const sel = window.getSelection()
+  const range = document.createRange()
+  range.setStart(targetText, Math.max(0, Math.min(targetOffset, targetText.data.length)))
+  range.collapse(true)
+  sel.removeAllRanges()
+  sel.addRange(range)
+  return true
+}
+
+function restoreCaretInBlock(block, offset, atEnd) {
+  const sel = window.getSelection()
+  const range = document.createRange()
+  const target = lastTextNode(block)
+  if (target) {
+    const idx = atEnd ? target.data.length : Math.max(0, Math.min(offset, target.data.length))
+    range.setStart(target, idx)
+    range.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(range)
+  }
+}
+
+function lastTextNode(root) {
+  let last = null
+  const walk = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      last = node
+      return
+    }
+    for (let i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i])
+  }
+  walk(root)
+  return last
+}
+
+function caretInsideCode() {
+  const g = getNodeAndOffset()
+  if (!g) return false
+  let node = g.text
+  while (node) {
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'CODE') return true
+    node = node.parentNode
+  }
+  return false
+}
+
+function indentListItem() {
+  const li = getActiveListItem()
+  if (!li) return
+  const list = li.parentNode
+  if (!list || (list.tagName !== 'UL' && list.tagName !== 'OL')) return
+  const prev = li.previousElementSibling
+  if (!prev || prev.tagName !== 'LI') return
+  const listType = list.tagName === 'OL' ? 'OL' : 'UL'
+  let nested = null
+  for (let i = prev.children.length - 1; i >= 0; i--) {
+    const child = prev.children[i]
+    if (child.tagName === listType) {
+      nested = child
+      break
+    }
+    if (child.tagName === 'UL' || child.tagName === 'OL') nested = child
+  }
+  if (!nested) {
+    nested = document.createElement(listType)
+    prev.appendChild(nested)
+  }
+  nested.appendChild(li)
+  placeCaretInLi(li)
+}
+
+function outdentListItem() {
+  const li = getActiveListItem()
+  if (!li) return
+  const list = li.parentNode
+  if (!list || (list.tagName !== 'UL' && list.tagName !== 'OL')) return
+  const parentLi = list.parentNode && list.parentNode.tagName === 'LI' ? list.parentNode : null
+  if (!parentLi) return
+  list.removeChild(li)
+  if (!list.children.length) parentLi.removeChild(list)
+  parentLi.parentNode.insertBefore(li, parentLi.nextSibling)
+  placeCaretInLi(li)
+}
+
 function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const [title, setTitle] = useState(note.title)
   const [body, setBody] = useState(note.body)
@@ -101,6 +310,7 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const mountedRef = useRef(false)
   const fixingRef = useRef(false)
   const prevSlugRef = useRef(note.slug)
+  const prevModeRef = useRef('edit')
   const lastSavedRef = useRef({ title: note.title, body: note.body, tags: note.tags || [] })
   useEffect(() => {
     if (!mountedRef.current || prevSlugRef.current !== note.slug) {
@@ -124,28 +334,84 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     setSaved(!hasChanges)
   }, [title, body, tags])
 
+  useEffect(() => {
+    if (prevModeRef.current === 'markdown' && mode === 'edit' && editorRef.current) {
+      editorRef.current.innerHTML = renderMarkdown(body) || '<br>'
+    }
+    prevModeRef.current = mode
+  }, [mode, body])
+
   const saveNow = useCallback(async () => {
     setSaved(true)
     await onUpdate(note.slug, { title, body, tags })
     lastSavedRef.current = { title, body, tags }
   }, [note.slug, title, body, tags, onUpdate])
 
+  const computeBody = useCallback(() => {
+    const el = editorRef.current
+    if (!el) return ''
+    try {
+      fixListDom(el)
+    } catch {}
+    const html = el.innerHTML
+    if (!html || html === '<br>') return ''
+    return turndown.turndown(html)
+  }, [])
+
   const syncFromEditor = useCallback(() => {
     if (!editorRef.current || fixingRef.current) return
     fixingRef.current = true
-    fixListDom(editorRef.current)
-    const html = editorRef.current.innerHTML
+    setBody(computeBody())
     fixingRef.current = false
-    if (!html || html === '<br>') {
-      setBody('')
-    } else {
-      setBody(turndown.turndown(html))
+  }, [computeBody])
+
+  const maybeAutoFormat = useCallback(() => {
+    const el = editorRef.current
+    if (!el || fixingRef.current) return false
+    if (caretInsideCode()) return false
+    const goal = getBlockGoal()
+    if (!goal) return false
+    const caretAtEnd = goal.blockText.length - goal.caretInBlock <= 1
+    const blockType = caretAtEnd ? isCompletedBlockPattern(goal.blockText) : null
+    let inline = null
+    if (!blockType) {
+      inline = isCompletedInlinePattern(goal.blockText, goal.caretInBlock)
     }
+    if (!blockType && !inline) return false
+    const oldBlockText = goal.blockText
+    const rendered = renderMarkdown(oldBlockText)
+    if (!rendered) return false
+    let caretTarget = null
+    fixingRef.current = true
+    try {
+      if (goal.block === el) {
+        el.innerHTML = rendered
+        caretTarget = el.querySelector('p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, ul, ol')
+      } else {
+        const holder = goal.block.parentNode
+        const index = Array.prototype.indexOf.call(holder.children, goal.block)
+        goal.block.outerHTML = rendered
+        const placed = holder.children[index]
+        caretTarget = placed && placed.nodeType === Node.ELEMENT_NODE
+          ? placed.querySelector('p, li, h1, h2, h3, h4, h5, h6, blockquote, pre') || placed
+          : placed
+      }
+    } catch {}
+    fixingRef.current = false
+    const block = caretTarget
+    const renderedText = block ? block.textContent : el.innerText || el.textContent
+    const mapped = resolveCaretOffset(oldBlockText, goal.caretInBlock, renderedText)
+    const target = block || el
+    requestAnimationFrame(() => {
+      restoreCaretInBlock(target, mapped, caretAtEnd)
+    })
+    return true
   }, [])
 
   const handleInput = useCallback(() => {
+    maybeAutoFormat()
     syncFromEditor()
-  }, [syncFromEditor])
+  }, [maybeAutoFormat, syncFromEditor])
 
   const cmd = useCallback((fn) => {
     const el = editorRef.current
@@ -160,26 +426,26 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
       e.preventDefault()
       cmd(() => {
         if (e.shiftKey) {
-          document.execCommand('outdent')
+          outdentListItem()
         } else {
-          document.execCommand('indent')
+          indentListItem()
         }
       })
     }
   }, [cmd])
 
   const toggleMode = useCallback(() => {
-    setMode((prev) => {
-      if (prev === 'edit') {
+    if (mode === 'edit') {
+      setMode('markdown')
+      try {
         syncFromEditor()
-        return 'markdown'
+      } catch {
+        setBody(editorRef.current ? editorRef.current.innerText : body)
       }
-      if (editorRef.current) {
-        editorRef.current.innerHTML = renderMarkdown(body) || '<br>'
-      }
-      return 'edit'
-    })
-  }, [body, syncFromEditor])
+    } else {
+      setMode('edit')
+    }
+  }, [mode, syncFromEditor, body])
 
   return (
     <div className="editor">
@@ -255,11 +521,18 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
           document.execCommand('insertHTML', false, '<pre><code>code</code></pre>')
         })} title="Code block">{"{ }"}</button>
         <span className="tb-sep" />
-        <button
-          className={`tb-btn mode-toggle ${mode === 'markdown' ? 'active' : ''}`}
-          onClick={toggleMode}
-          title="Toggle Markdown source"
-        >MD</button>
+        <label className="md-toggle" title="Toggle between formatted editor and raw Markdown">
+          <span className="md-toggle-label">MD</span>
+          <input
+            type="checkbox"
+            className="md-toggle-input"
+            checked={mode === 'markdown'}
+            onChange={toggleMode}
+          />
+          <span className="md-toggle-track">
+            <span className="md-toggle-thumb" />
+          </span>
+        </label>
       </div>
       <div className="editor-body">
         {mode === 'edit' ? (
@@ -330,10 +603,11 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
       {showCloseModal && (
         <div className="modal-overlay" onClick={() => setShowCloseModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <p className="modal-message">You have unsaved changes</p>
+            <p className="modal-message">You have unsaved changes. Do you want to save them before closing?</p>
             <div className="modal-actions">
-              <button className="modal-cancel" onClick={() => { setShowCloseModal(false); onCloseNote() }}>Cancelar</button>
-              <button className="modal-cancel" onClick={async () => { await saveNow(); setShowCloseModal(false); onCloseNote() }}>Confirmar</button>
+              <button className="modal-cancel" onClick={() => setShowCloseModal(false)} title="Keep editing the note">Keep editing</button>
+              <button className="modal-confirm" onClick={() => { setShowCloseModal(false); onCloseNote() }} title="Close the note without saving changes">Discard changes</button>
+              <button className="modal-save" onClick={async () => { await saveNow(); setShowCloseModal(false); onCloseNote() }} title="Save the changes and close the note">Save and close</button>
             </div>
           </div>
         </div>

@@ -1,30 +1,30 @@
 # GNotes
 
-Aplicación personal de notas minimalista, rápida y autoalojable.
+Minimalist, fast, self-hosted personal notes application.
 
-## Características
+## Features
 
-- Editor WYSIWYG con barra de formato flotante y modal para links
-- Autoguardado con debounce de 2s
-- Búsqueda de notas por título, cuerpo y tags
-- Dark mode por defecto
-- Login OAuth (Google, GitHub, Microsoft) para persistencia cloud
-- Almacenamiento local offline (IndexedDB)
-- API REST con owner (SHA-256 del email)
-- CSS puro, sin frameworks de UI
+- WYSIWYG editor with floating format bar and link modal
+- Manual save (no autosave) with unsaved-changes confirmation
+- Note search by title, body and tags
+- Dark mode by default
+- OAuth login (Google, GitHub, Microsoft) for cloud persistence
+- Offline local storage (IndexedDB)
+- REST API with owner (email SHA-256)
+- Pure CSS, no UI frameworks
 
 ## Stack
 
 - React + Vite
-- CSS puro
-- turndown (HTML → Markdown para el editor WYSIWYG)
+- Pure CSS
+- turndown (HTML → Markdown for the WYSIWYG editor)
 - Vitest (tests)
-- API REST externa (`https://api.geduma.com`)
-- Auth: OAuth (geduma-auth) + JWT single-use
-- IndexedDB nativo (local storage)
+- External REST API (`https://api.geduma.com`)
+- Auth: OAuth (geduma-auth) + single-use JWT
+- Native IndexedDB (local storage)
 - Web Crypto API (SHA-256)
 
-## Estructura
+## Structure
 
 ```
 gnotes/
@@ -42,36 +42,36 @@ gnotes/
 └── public/
 ```
 
-## Desarrollo
+## Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-La app se abre en `http://localhost:5173/`.
+The app opens at `http://localhost:5173/`.
 
 ## Tests
 
 ```bash
 npm run test        # watch mode
-npm run test:run    # una vez
+npm run test:run    # run once
 ```
 
-## Variables de Entorno
+## Environment Variables
 
 ```
-VITE_AUTH_KEY=...              # API key para POST /auth
-VITE_APP_ID=app_mqpon84ym0hbvi # App ID para geduma-auth
+VITE_AUTH_KEY=...              # API key for POST /auth
+VITE_APP_ID=app_mqpon84ym0hbvi # App ID for geduma-auth
 ```
 
 ## API
 
-La app consume una API REST externa. Documentación completa en `PRD.md`.
+The app consumes an external REST API. Full documentation in `PRD.md`.
 
-## Filosofía
+## Philosophy
 
-- Minimalista: sin dashboards ni widgets
-- Rápida: respuesta instantánea
-- Offline-first: sin cuenta, persistencia local
-- Sin vendor lock-in: datos portables
+- Minimalist: no dashboards or widgets
+- Fast: instant response
+- Offline-first: no account required, local persistence
+- No vendor lock-in: portable data
