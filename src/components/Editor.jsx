@@ -182,42 +182,6 @@ function getBlockGoal() {
   return { block, blockText, caretInBlock }
 }
 
-function restoreCaretAtOffset(root, offset) {
-  let targetText = null
-  let targetOffset = 0
-  let consumed = 0
-  const find = (node) => {
-    if (targetText) return
-    if (node.nodeType === Node.TEXT_NODE) {
-      const next = consumed + node.data.length
-      if (offset >= consumed && offset <= next) {
-        targetText = node
-        targetOffset = offset - consumed
-      } else {
-        consumed = next
-      }
-    } else {
-      for (let i = 0; i < node.childNodes.length && !targetText; i++) {
-        find(node.childNodes[i])
-      }
-    }
-  }
-  find(root)
-  if (!targetText) {
-    const last = lastTextNode(root)
-    if (!last) return false
-    targetText = last
-    targetOffset = last.data.length
-  }
-  const sel = window.getSelection()
-  const range = document.createRange()
-  range.setStart(targetText, Math.max(0, Math.min(targetOffset, targetText.data.length)))
-  range.collapse(true)
-  sel.removeAllRanges()
-  sel.addRange(range)
-  return true
-}
-
 function restoreCaretInBlock(block, offset, atEnd) {
   const sel = window.getSelection()
   const range = document.createRange()
@@ -299,7 +263,6 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const [tags, setTags] = useState(note.tags || [])
   const [tagInput, setTagInput] = useState('')
   const [saved, setSaved] = useState(true)
-  const [mode, setMode] = useState('edit')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showCloseModal, setShowCloseModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
@@ -310,7 +273,6 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
   const mountedRef = useRef(false)
   const fixingRef = useRef(false)
   const prevSlugRef = useRef(note.slug)
-  const prevModeRef = useRef('edit')
   const lastSavedRef = useRef({ title: note.title, body: note.body, tags: note.tags || [] })
   useEffect(() => {
     if (!mountedRef.current || prevSlugRef.current !== note.slug) {
@@ -321,7 +283,6 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
       lastSavedRef.current = { title: note.title, body: note.body, tags: note.tags || [] }
       prevSlugRef.current = note.slug
       setBody(note.body)
-      setMode('edit')
       if (editorRef.current) {
         editorRef.current.innerHTML = renderMarkdown(note.body) || '<br>'
       }
@@ -333,14 +294,6 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     const hasChanges = title !== lastSaved.title || body !== lastSaved.body || JSON.stringify(tags) !== JSON.stringify(lastSaved.tags)
     setSaved(!hasChanges)
   }, [title, body, tags])
-
-  useEffect(() => {
-    if (prevModeRef.current === 'markdown' && mode === 'edit' && editorRef.current) {
-      editorRef.current.innerHTML = renderMarkdown(body) || '<br>'
-    }
-    prevModeRef.current = mode
-  }, [mode, body])
-
   const saveNow = useCallback(async () => {
     setSaved(true)
     await onUpdate(note.slug, { title, body, tags })
@@ -434,19 +387,6 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
     }
   }, [cmd])
 
-  const toggleMode = useCallback(() => {
-    if (mode === 'edit') {
-      setMode('markdown')
-      try {
-        syncFromEditor()
-      } catch {
-        setBody(editorRef.current ? editorRef.current.innerText : body)
-      }
-    } else {
-      setMode('edit')
-    }
-  }, [mode, syncFromEditor, body])
-
   return (
     <div className="editor">
       <div className="editor-header">
@@ -520,38 +460,16 @@ function Editor({ note, onUpdate, onDelete, onCloseNote, persisted }) {
         <button className="tb-btn" onClick={() => cmd(() => {
           document.execCommand('insertHTML', false, '<pre><code>code</code></pre>')
         })} title="Code block">{"{ }"}</button>
-        <span className="tb-sep" />
-        <label className="md-toggle" title="Toggle between formatted editor and raw Markdown">
-          <span className="md-toggle-label">MD</span>
-          <input
-            type="checkbox"
-            className="md-toggle-input"
-            checked={mode === 'markdown'}
-            onChange={toggleMode}
-          />
-          <span className="md-toggle-track">
-            <span className="md-toggle-thumb" />
-          </span>
-        </label>
       </div>
       <div className="editor-body">
-        {mode === 'edit' ? (
-          <div
-            ref={editorRef}
-            className="editor-wysiwyg"
-            contentEditable
-            suppressContentEditableWarning
-            onInput={handleInput}
-            onKeyDown={handleKeyDown}
-          />
-        ) : (
-          <textarea
-            className="md-textarea"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            spellCheck={false}
-          />
-        )}
+        <div
+          ref={editorRef}
+          className="editor-wysiwyg"
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+        />
       </div>
       {showLinkModal && (
         <div className="modal-overlay" onClick={() => setShowLinkModal(false)}>

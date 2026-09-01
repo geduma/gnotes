@@ -50,21 +50,6 @@ describe('live auto-format', () => {
   beforeEach(() => { document.body.innerHTML = '' })
   afterEach(() => { window.getSelection().removeAllRanges() })
 
-  it('keeps all content when toggling MD mode back and forth', () => {
-    const c = mountEditor('# H1\n\n**Bold**')
-    const editor = c.container.querySelector('.editor-wysiwyg')
-    expect(editor.innerHTML).toContain('<h1>H1</h1>')
-    const input = c.container.querySelector('.md-toggle-input')
-    act(() => { input.click() })
-    const ta = c.container.querySelector('.md-textarea')
-    expect(ta).toBeTruthy()
-    expect(ta.value).toBe('# H1\n\n**Bold**')
-    act(() => { input.click() })
-    const editor2 = c.container.querySelector('.editor-wysiwyg')
-    expect(editor2.innerHTML).toContain('<h1>H1</h1>')
-    expect(editor2.innerHTML).toContain('<strong>Bold</strong>')
-  })
-
   it('converts "# Hello" into h1', () => {
     const c = mountEditor('')
     const editor = c.container.querySelector('.editor-wysiwyg')
